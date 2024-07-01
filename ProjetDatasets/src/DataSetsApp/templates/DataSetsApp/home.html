@@ -1,0 +1,24 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+<div class="jumbotron">
+    <!-- Titre principal de la page d'accueil -->
+    <h1 class="display-4">Bienvenue sur la plateforme des datasets</h1>
+    <!-- Sous-titre ou description -->
+    <p class="lead">Utilisez les liens ci-dessous :</p>
+    <hr class="my-4">
+    <ul class="list-unstyled">
+        <!-- Lien pour voir les datasets -->
+        <li class="mb-2"><a class="btn btn-primary btn-lg" href="{% url 'list_datasets' %}" role="button">Voir les datasets</a></li>
+        {% if user.is_authenticated %}
+            <!-- Si l'utilisateur est authentifié, afficher les options suivantes -->
+            <li class="mb-2"><a class="btn btn-secondary btn-lg" href="{% url 'upload_dataset' %}" role="button">Uploader un dataset</a></li>
+            <li class="mb-2"><a class="btn btn-danger btn-lg" href="{% url 'logout' %}" role="button">Se déconnecter</a></li>
+        {% else %}
+            <!-- Si l'utilisateur n'est pas authentifié, afficher les options suivantes -->
+            <li class="mb-2"><a class="btn btn-success btn-lg" href="{% url 'login' %}" role="button">Se connecter</a></li>
+            <li class="mb-2"><a class="btn btn-info btn-lg" href="{% url 'signup' %}" role="button">S'inscrire</a></li>
+        {% endif %}
+    </ul>
+</div>
+{% endblock %}

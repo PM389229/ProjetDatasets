@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <!-- Définition du jeu de caractères utilisé par la page -->
+    <meta charset="UTF-8">
+    <!-- Configuration de la largeur de la page pour qu'elle s'adapte à l'écran du périphérique -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Titre de la page, peut être remplacé par des blocs spécifiques dans les templates enfants -->
+    <title>{% block title %}DataSet Projet{% endblock %}</title>
+    <!-- Inclusion du fichier CSS Bootstrap pour le style de la page -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <!-- Barre de navigation de la page -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <!-- Lien vers la page d'accueil -->
+            <a class="navbar-brand" href="{% url 'home' %}">Accueil</a>
+            <!-- Bouton pour afficher/cacher le menu de navigation sur les petits écrans -->
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <!-- Lien vers la page des datasets -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'list_datasets' %}">Datasets</a>
+                    </li>
+                    <!-- Affichage des liens spécifiques si l'utilisateur est connecté -->
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'upload_dataset' %}">Charger un dataset</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'upload_image_folder' %}">Charger un dossier images</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'logout' %}">Se déconnecter</a>
+                        </li>
+                    {% else %}
+                        <!-- Affichage des liens spécifiques si l'utilisateur n'est pas connecté -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">Se connecter</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'signup' %}">S'inscrire</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </nav>
+    </header>
+    <main class="container mt-4">
+        <!-- Bloc de contenu spécifique à chaque page -->
+        {% block content %}
+        {% endblock %}
+    </main>
+    <!-- Inclusion des fichiers JavaScript nécessaires pour le fonctionnement de Bootstrap -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

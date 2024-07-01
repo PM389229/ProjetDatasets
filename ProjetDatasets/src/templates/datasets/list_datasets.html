@@ -1,0 +1,61 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+<div class="container" style="text-align: center; margin-top: 20px;">
+    <form method="GET" action="{% url 'list_datasets' %}" class="form-inline justify-content-center mb-4">
+        <input class="form-control mr-sm-2" type="search" placeholder="Rechercher" aria-label="Search" name="q" value="{{ query }}">
+        <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Rechercher</button>
+    </form>
+    <div class="btn-group btn-group-toggle mb-4" data-toggle="buttons">
+        <label class="btn btn-secondary active">
+            <input type="radio" name="dataset_type" id="text" value="text" checked autocomplete="off" onclick="toggleVisibility('text');"> Datasets de Texte
+        </label>
+        <label class="btn btn-secondary">
+            <input type="radio" name="dataset_type" id="images" value="images" autocomplete="off" onclick="toggleVisibility('images');"> Datasets d'Images
+        </label>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8" id="text_section">
+            <h1>Datasets de Texte</h1>
+            <ul class="list-group">
+                {% for collection_name in collection_names_csv %}
+                <li class="list-group-item">
+                    <a href="{% url 'download_data' collection_name=collection_name %}">{{ collection_name }}</a>
+                </li>
+                {% empty %}
+                <li class="list-group-item">Aucun dataset de texte disponible.</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="col-md-8" id="images_section" style="display:none;">
+            <h2>Datasets d'Images</h2>
+            <ul class="list-group">
+                {% for image_collection_name in collection_names_images %}
+                <li class="list-group-item">
+                    <a href="{% url 'download_all_images' image_collection_name=image_collection_name %}">{{ image_collection_name }}</a>
+                </li>
+                {% empty %}
+                <li class="list-group-item">Aucune image disponible.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleVisibility(selectedType) {
+        var textSection = document.getElementById('text_section');
+        var imagesSection = document.getElementById('images_section');
+
+        if (selectedType === 'text') {
+            textSection.style.display = 'block';
+            imagesSection.style.display = 'none';
+        } else {
+            textSection.style.display = 'none';
+            imagesSection.style.display = 'block';
+        }
+    }
+</script>
+{% endblock %}
