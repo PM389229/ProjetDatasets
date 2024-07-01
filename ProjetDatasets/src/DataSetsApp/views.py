@@ -188,19 +188,43 @@ def handle_json(fichier, collection):
 
 
 
-
 @login_required
 def list_datasets(request):
     query = request.GET.get('q', '').lower()
     client = MongoClient(f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@localhost:27017/')
 
-    # Recherche dans la base de données des datasets de texte
-    db_csv = client['my_database']
-    all_collections_csv = [name for name in db_csv.list_collection_names() if name != 'dataset(metadata)']
+    # Accéder à la base de données
+    db = client['my_database']
+
+    # Récupérer les métadonnées
+    metadata_collection = db['dataset(metadata)']
+    metadata_list = list(metadata_collection.find())
+    metadata_dict = {metadata['titre'].replace(" ", "_").lower(): metadata for metadata in metadata_list}
+
+    # Filtrer les métadonnées par description si une requête est fournie
     if query:
-        collection_names_csv = [name for name in all_collections_csv if query in name.lower()]
+        filtered_metadata_list = [metadata for metadata in metadata_list if query in metadata.get('description', '').lower()]
     else:
-        collection_names_csv = all_collections_csv
+        filtered_metadata_list = metadata_list
+
+    # Construire la liste des datasets avec leurs métadonnées et échantillons
+    datasets = []
+    for metadata in filtered_metadata_list:
+        collection_name = metadata['titre'].replace(" ", "_").lower()
+        dataset_sample = list(db[collection_name].find().limit(3))  # Récupérer les trois premières lignes
+        metadata['formatted_titre'] = metadata['titre'].replace(" ", "_").lower()
+        
+        # Récupérer l'utilisateur par ID
+        try:
+            user = User.objects.get(id=metadata['Auteur_id'])
+            metadata['Auteur'] = user.username
+        except User.DoesNotExist:
+            metadata['Auteur'] = "Utilisateur inconnu"
+        
+        datasets.append({
+            'metadata': metadata,
+            'sample': dataset_sample
+        })
 
     # Recherche dans la base de données des dossiers d'images
     db_images = client['my_database_images']
@@ -213,10 +237,11 @@ def list_datasets(request):
     client.close()
 
     return render(request, 'datasets/list_datasets.html', {
-        'collection_names_csv': collection_names_csv,
+        'datasets': datasets,
         'collection_names_images': collection_names_images,
         'query': query
     })
+
 
 
 
@@ -244,22 +269,17 @@ def download_all_images(request, image_collection_name):
 
 
 
-
-def download_data(request, collection_name):
-    # Extraire le type de fichier du nom de la collection
-    match = re.search(r'\((CSV|JSON|XML)\)$', collection_name, re.IGNORECASE)
-    format_type = match.group(1).lower() if match else 'csv'  # Défaut à CSV si non trouvé
-
+def download_data(request, collection_name, fichier_type):
     client = MongoClient(f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@localhost:27017/')
     db = client['my_database']
     collection = db[collection_name]
     documents = list(collection.find())
 
-    if format_type == 'json':
+    if fichier_type == 'json':
         # Utiliser json_util pour sérialiser les documents MongoDB
         response = HttpResponse(json.dumps(documents, default=json_util.default), content_type='application/json')
         response['Content-Disposition'] = f'attachment; filename="{collection_name}.json"'
-    elif format_type == 'xml':
+    elif fichier_type == 'xml':
         root = ET.Element('Data')
         for document in documents:
             item = ET.SubElement(root, 'Item')

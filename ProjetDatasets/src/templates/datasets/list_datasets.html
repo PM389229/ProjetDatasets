@@ -17,11 +17,27 @@
 
     <div class="row justify-content-center">
         <div class="col-md-8" id="text_section">
-            <h1>Datasets de Texte</h1>
+            <h1>Datasets </h1>
             <ul class="list-group">
-                {% for collection_name in collection_names_csv %}
+                {% for item in datasets %}
                 <li class="list-group-item">
-                    <a href="{% url 'download_data' collection_name=collection_name %}">{{ collection_name }}</a>
+                    <h2>{{ item.metadata.titre }}</h2>
+                    <button class="btn btn-info" onclick="toggleInfo({{ forloop.counter }})">Plus d'infos</button>
+                    <div id="info-{{ forloop.counter }}" style="display: none;">
+                        <p>Description: {{ item.metadata.description }}</p>
+                        <p>Type de fichier: {{ item.metadata.fichier_type }}</p>
+                        <p>Uploadé par: {{ item.metadata.Auteur }}</p>
+                        <p>Uploadé le: {{ item.metadata.HeureChargement }}</p>
+                    </div>
+                    <h3><a href="javascript:void(0);" onclick="toggleSample({{ forloop.counter }})">Apercu</a></h3>
+                    <div id="sample-{{ forloop.counter }}" style="display: none;">
+                        <pre>
+                            {% for sample in item.sample %}
+                                {{ sample }}
+                            {% endfor %}
+                        </pre>
+                    </div>
+                    <a href="{% url 'download_data' collection_name=item.metadata.formatted_titre fichier_type=item.metadata.fichier_type %}">Télécharger</a>
                 </li>
                 {% empty %}
                 <li class="list-group-item">Aucun dataset de texte disponible.</li>
@@ -55,6 +71,24 @@
         } else {
             textSection.style.display = 'none';
             imagesSection.style.display = 'block';
+        }
+    }
+
+    function toggleSample(id) {
+        var sampleDiv = document.getElementById('sample-' + id);
+        if (sampleDiv.style.display === 'none') {
+            sampleDiv.style.display = 'block';
+        } else {
+            sampleDiv.style.display = 'none';
+        }
+    }
+
+    function toggleInfo(id) {
+        var infoDiv = document.getElementById('info-' + id);
+        if (infoDiv.style.display === 'none') {
+            infoDiv.style.display = 'block';
+        } else {
+            infoDiv.style.display = 'none';
         }
     }
 </script>
