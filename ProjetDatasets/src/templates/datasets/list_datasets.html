@@ -1,7 +1,7 @@
 {% extends "base_generic.html" %}
 
 {% block content %}
-<div class="container" style="text-align: center; margin-top: 20px;">
+<div class="container" style="margin-top: 20px;">
     <form method="GET" action="{% url 'list_datasets' %}" class="form-inline justify-content-center mb-4">
         <input class="form-control mr-sm-2" type="search" placeholder="Rechercher" aria-label="Search" name="q" value="{{ query }}">
         <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Rechercher</button>
@@ -17,27 +17,37 @@
 
     <div class="row justify-content-center">
         <div class="col-md-8" id="text_section">
-            <h1>Datasets </h1>
+            <h1>Datasets de Texte</h1>
             <ul class="list-group">
                 {% for item in datasets %}
-                <li class="list-group-item">
-                    <h2>{{ item.metadata.titre }}</h2>
-                    <button class="btn btn-info" onclick="toggleInfo({{ forloop.counter }})">Plus d'infos</button>
-                    <div id="info-{{ forloop.counter }}" style="display: none;">
-                        <p>Description: {{ item.metadata.description }}</p>
-                        <p>Type de fichier: {{ item.metadata.fichier_type }}</p>
-                        <p>Uploadé par: {{ item.metadata.Auteur }}</p>
-                        <p>Uploadé le: {{ item.metadata.HeureChargement }}</p>
+                <li class="list-group-item mb-4 p-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="dataset-info">
+                            <h2>{{ item.metadata.titre }}</h2>
+                            <button class="btn btn-info btn-sm mt-2" onclick="toggleInfo({{ forloop.counter }})">Plus d'infos</button>
+                            <div id="info-{{ forloop.counter }}" class="mt-3 card" style="display: none;">
+                                <div class="card-body">
+                                    <p><strong>Description:</strong> {{ item.metadata.description }}</p>
+                                    <p><strong>Type de fichier:</strong> {{ item.metadata.fichier_type }}</p>
+                                    <p><strong>Uploadé par:</strong> {{ item.metadata.Auteur }}</p>
+                                    <p><strong>Uploadé le:</strong> {{ item.metadata.HeureChargement }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dataset-actions ml-3">
+                            <a href="javascript:void(0);" class="btn btn-outline-primary btn-sm mt-2" onclick="toggleSample({{ forloop.counter }})">Aperçu</a>
+                            <div id="sample-{{ forloop.counter }}" class="mt-3 card" style="display: none;">
+                                <div class="card-body">
+                                    <pre>
+                                        {% for sample in item.sample %}
+                                            {{ sample }}
+                                        {% endfor %}
+                                    </pre>
+                                </div>
+                            </div>
+                            <a href="{% url 'download_data' collection_name=item.metadata.formatted_titre fichier_type=item.metadata.fichier_type %}" class="btn btn-outline-success btn-sm mt-2">Télécharger</a>
+                        </div>
                     </div>
-                    <h3><a href="javascript:void(0);" onclick="toggleSample({{ forloop.counter }})">Apercu</a></h3>
-                    <div id="sample-{{ forloop.counter }}" style="display: none;">
-                        <pre>
-                            {% for sample in item.sample %}
-                                {{ sample }}
-                            {% endfor %}
-                        </pre>
-                    </div>
-                    <a href="{% url 'download_data' collection_name=item.metadata.formatted_titre fichier_type=item.metadata.fichier_type %}">Télécharger</a>
                 </li>
                 {% empty %}
                 <li class="list-group-item">Aucun dataset de texte disponible.</li>
@@ -49,7 +59,7 @@
             <h2>Datasets d'Images</h2>
             <ul class="list-group">
                 {% for image_collection_name in collection_names_images %}
-                <li class="list-group-item">
+                <li class="list-group-item mb-4 p-4">
                     <a href="{% url 'download_all_images' image_collection_name=image_collection_name %}">{{ image_collection_name }}</a>
                 </li>
                 {% empty %}

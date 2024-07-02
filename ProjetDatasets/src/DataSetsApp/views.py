@@ -130,11 +130,21 @@ def upload_dataset(request):
         form = DatasetForm(request.POST, request.FILES)
         if form.is_valid():
             dataset = form.save(commit=False)
-            dataset.uploaded_by = request.user
-            dataset.save()
+
+
+            # Définir l'utilisateur connecté comme l'auteur du dataset
+            dataset.Auteur = request.user
 
             fichier = request.FILES['fichier']
-            fichier_type = fichier.name.split('.')[-1]
+            fichier_type = fichier.name.split('.')[-1].lower()
+            if fichier_type in ['csv', 'json']:
+                dataset.fichier_type = fichier_type
+            else:
+                return HttpResponse("Type de fichier non supporté", status=400)
+
+            dataset.save()
+
+ 
 
             client = MongoClient(f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@localhost:27017/')
             db = client['my_database']  # Base de données pour les datasets

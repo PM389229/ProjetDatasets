@@ -15,13 +15,8 @@ class DatasetForm(forms.ModelForm):
     # Informations de métadonnées pour le formulaire.
     class Meta:
         model = Dataset  # Modèle associé au formulaire
-        fields = ['titre', 'fichier','fichier_type','Auteur','description']  # champs inclus dans le formulaire
+        fields = ['titre', 'fichier','description']  # champs inclus dans le formulaire
 
-
-    def __init__(self, *args, **kwargs):
-        super(DatasetForm, self).__init__(*args, **kwargs)
-        # Filtrer les utilisateurs du groupe "Professeurs"
-        self.fields['Auteur'].queryset = User.objects.filter(groups__name='Professeurs')
 
 
 
