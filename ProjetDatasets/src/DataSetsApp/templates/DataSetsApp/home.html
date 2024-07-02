@@ -9,10 +9,10 @@
     <hr class="my-4">
     <ul class="list-unstyled">
         <!-- Lien pour voir les datasets -->
-        <li class="mb-2"><a class="btn btn-primary btn-lg" href="{% url 'list_datasets' %}" role="button">Voir les datasets</a></li>
+        <li class="mb-2"><a class="btn btn-primary btn-lg" href="{% url 'list_datasets' %}" role="button">Les datasets</a></li>
         {% if user.is_authenticated %}
             <!-- Si l'utilisateur est authentifié, afficher les options suivantes -->
-            <li class="mb-2"><a class="btn btn-secondary btn-lg" href="{% url 'upload_dataset' %}" role="button">Uploader un dataset</a></li>
+            <li class="mb-2"><a class="btn btn-secondary btn-lg" href="{% url 'upload_dataset' %}" role="button">Charger un dataset</a></li>
             <li class="mb-2"><a class="btn btn-danger btn-lg" href="{% url 'logout' %}" role="button">Se déconnecter</a></li>
         {% else %}
             <!-- Si l'utilisateur n'est pas authentifié, afficher les options suivantes -->

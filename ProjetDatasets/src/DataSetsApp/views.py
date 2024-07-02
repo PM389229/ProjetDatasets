@@ -7,7 +7,7 @@ from django.contrib.auth.models import User, Group
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login, authenticate
 from django.views.decorators.csrf import csrf_exempt
-from .models import Dataset
+from .models import Dataset , ImageFolderMetadata
 from .forms import DatasetForm, ImageUploadForm
 from django.http import HttpResponse
 from django.conf import settings
@@ -71,7 +71,6 @@ def signup(request):
 
 
 
-
 @login_required
 @csrf_exempt
 def upload_image_folder(request):
@@ -82,13 +81,24 @@ def upload_image_folder(request):
         form = ImageUploadForm(request.POST)
         if form.is_valid():
             image_dir = form.cleaned_data['image_dir']
+            fichier_type = form.cleaned_data['fichier_type']
+            description = form.cleaned_data['description']
             try:
-                # Vérifiez que le répertoire existe sur le serveur
                 if not os.path.exists(image_dir):
                     return HttpResponse(f"Directory {image_dir} does not exist", status=400)
                 
                 # Uploader les images depuis le répertoire
-                upload_images_to_mongo(image_dir, MONGO_URI)
+                upload_images_to_mongo(image_dir, MONGO_URI, request.user, fichier_type)
+                
+                # Enregistrer les métadonnées du dossier
+                folder_name = os.path.basename(image_dir)
+                ImageFolderMetadata.objects.create(
+                    folder_name=folder_name,
+                    description=description,    
+                    fichier_type=fichier_type,
+                    Auteur=request.user
+                )
+                
                 return HttpResponse('Upload successful!')
             except Exception as e:
                 return HttpResponse(f"Error during upload: {e}", status=500)
@@ -96,17 +106,14 @@ def upload_image_folder(request):
         form = ImageUploadForm()
     return render(request, 'datasets/upload_image_folder.html', {'form': form})
 
-
-
-
-def upload_images_to_mongo(image_dir, mongo_uri):
+def upload_images_to_mongo(image_dir, mongo_uri, user, fichier_type):
     client = MongoClient(mongo_uri)
     collection_name = os.path.basename(image_dir)
     db_name = 'my_database_images'
     collection = client[db_name][collection_name]
 
     for image_file in os.listdir(image_dir):
-        if image_file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
+        if image_file.lower().endswith(f'.{fichier_type}'):
             image_path = os.path.join(image_dir, image_file)
             with open(image_path, 'rb') as file:
                 encoded_image = binary.Binary(file.read())
@@ -117,7 +124,6 @@ def upload_images_to_mongo(image_dir, mongo_uri):
                 collection.insert_one(image_document)
 
     client.close()
-
 
 
 
@@ -206,7 +212,7 @@ def list_datasets(request):
     # Accéder à la base de données
     db = client['my_database']
 
-    # Récupérer les métadonnées
+    # Récupérer les métadonnées des datasets de texte
     metadata_collection = db['dataset(metadata)']
     metadata_list = list(metadata_collection.find())
     metadata_dict = {metadata['titre'].replace(" ", "_").lower(): metadata for metadata in metadata_list}
@@ -246,14 +252,17 @@ def list_datasets(request):
 
     client.close()
 
+    # Récupérer les métadonnées des dossiers d'images
+    image_folder_metadata_list = ImageFolderMetadata.objects.all()
+    if query:
+        image_folder_metadata_list = image_folder_metadata_list.filter(folder_name__icontains=query)
+
     return render(request, 'datasets/list_datasets.html', {
         'datasets': datasets,
         'collection_names_images': collection_names_images,
+        'image_folder_metadata_list': image_folder_metadata_list,
         'query': query
     })
-
-
-
 
 
 

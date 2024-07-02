@@ -1,3 +1,5 @@
+<!-- list_datasets.html -->
+
 {% extends "base_generic.html" %}
 
 {% block content %}
@@ -17,15 +19,15 @@
 
     <div class="row justify-content-center">
         <div class="col-md-8" id="text_section">
-            <h1>Datasets de Texte</h1>
+
             <ul class="list-group">
                 {% for item in datasets %}
                 <li class="list-group-item mb-4 p-4">
                     <div class="d-flex justify-content-between align-items-start">
                         <div class="dataset-info">
                             <h2>{{ item.metadata.titre }}</h2>
-                            <button class="btn btn-info btn-sm mt-2" onclick="toggleInfo({{ forloop.counter }})">Plus d'infos</button>
-                            <div id="info-{{ forloop.counter }}" class="mt-3 card" style="display: none;">
+                            <button class="btn btn-info btn-sm mt-2" onclick="toggleInfo('text-info-{{ forloop.counter }}')">Plus d'infos</button>
+                            <div id="text-info-{{ forloop.counter }}" class="mt-3 card" style="display: none;">
                                 <div class="card-body">
                                     <p><strong>Description:</strong> {{ item.metadata.description }}</p>
                                     <p><strong>Type de fichier:</strong> {{ item.metadata.fichier_type }}</p>
@@ -35,7 +37,7 @@
                             </div>
                         </div>
                         <div class="dataset-actions ml-3">
-                            <a href="javascript:void(0);" class="btn btn-outline-primary btn-sm mt-2" onclick="toggleSample({{ forloop.counter }})">Aperçu</a>
+                            <a href="javascript:void(0);" class="btn btn-outline-primary btn-sm mt-2" onclick="toggleSample('sample-{{ forloop.counter }}')">Aperçu</a>
                             <div id="sample-{{ forloop.counter }}" class="mt-3 card" style="display: none;">
                                 <div class="card-body">
                                     <pre>
@@ -56,11 +58,27 @@
         </div>
 
         <div class="col-md-8" id="images_section" style="display:none;">
-            <h2>Datasets d'Images</h2>
+
             <ul class="list-group">
-                {% for image_collection_name in collection_names_images %}
+                {% for image_folder_metadata in image_folder_metadata_list %}
                 <li class="list-group-item mb-4 p-4">
-                    <a href="{% url 'download_all_images' image_collection_name=image_collection_name %}">{{ image_collection_name }}</a>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="dataset-info">
+                            <h2>{{ image_folder_metadata.folder_name }}</h2>
+                            <button class="btn btn-info btn-sm mt-2" onclick="toggleInfo('image-info-{{ forloop.counter }}')">Plus d'infos</button>
+                            <div id="image-info-{{ forloop.counter }}" class="mt-3 card" style="display: none;">
+                                <div class="card-body">
+                                    <p><strong>Description:</strong> {{ image_folder_metadata.description }}</p>
+                                    <p><strong>Type de fichier:</strong> {{ image_folder_metadata.fichier_type }}</p>
+                                    <p><strong>Uploadé par:</strong> {{ image_folder_metadata.Auteur.username }}</p>
+                                    <p><strong>Uploadé le:</strong> {{ image_folder_metadata.HeureChargement }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dataset-actions ml-3">
+                            <a href="{% url 'download_all_images' image_collection_name=image_folder_metadata.folder_name %}" class="btn btn-outline-success btn-sm mt-2">Télécharger</a>
+                        </div>
+                    </div>
                 </li>
                 {% empty %}
                 <li class="list-group-item">Aucune image disponible.</li>
@@ -84,21 +102,21 @@
         }
     }
 
-    function toggleSample(id) {
-        var sampleDiv = document.getElementById('sample-' + id);
-        if (sampleDiv.style.display === 'none') {
-            sampleDiv.style.display = 'block';
-        } else {
-            sampleDiv.style.display = 'none';
-        }
-    }
-
     function toggleInfo(id) {
-        var infoDiv = document.getElementById('info-' + id);
+        var infoDiv = document.getElementById(id);
         if (infoDiv.style.display === 'none') {
             infoDiv.style.display = 'block';
         } else {
             infoDiv.style.display = 'none';
+        }
+    }
+
+    function toggleSample(id) {
+        var sampleDiv = document.getElementById(id);
+        if (sampleDiv.style.display === 'none') {
+            sampleDiv.style.display = 'block';
+        } else {
+            sampleDiv.style.display = 'none';
         }
     }
 </script>

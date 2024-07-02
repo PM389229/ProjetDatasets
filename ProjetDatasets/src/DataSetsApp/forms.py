@@ -22,5 +22,9 @@ class DatasetForm(forms.ModelForm):
 
 # formulaire pour l'upload de dossiers d'images.
 class ImageUploadForm(forms.Form):
-    # Champ de texte pour le lien vers le dossier voulu.
     image_dir = forms.CharField(label='Lien vers le dossier voulu', max_length=255)
+    fichier_type = forms.ChoiceField(
+        label='Type de fichier',
+        choices=[('png', 'PNG'), ('jpeg', 'JPEG'), ('jpg', 'JPG'), ('gif', 'GIF'), ('bmp', 'BMP')]
+    )
+    description = forms.CharField(widget=forms.Textarea, required=False, label='Description')

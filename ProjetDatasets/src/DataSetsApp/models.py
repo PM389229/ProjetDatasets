@@ -29,3 +29,18 @@ class Image(models.Model):
         db_table = 'image'
         app_label = 'DataSetsApp'
         managed = True
+
+
+
+
+class ImageFolderMetadata(models.Model):
+    folder_name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    fichier_type = models.CharField(max_length=10)
+    Auteur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    HeureChargement = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'datasetimagefolder(metadata)'
+        app_label = 'DataSetsApp'
+        managed = True
