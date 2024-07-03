@@ -6,6 +6,14 @@
 <div class="container" style="margin-top: 20px;">
     <form method="GET" action="{% url 'list_datasets' %}" class="form-inline justify-content-center mb-4">
         <input class="form-control mr-sm-2" type="search" placeholder="Rechercher" aria-label="Search" name="q" value="{{ query }}">
+        <select class="form-control mr-sm-2" name="file_type">
+            <option value="">Tous les types</option>
+            <option value="csv" {% if file_type == 'csv' %}selected{% endif %}>CSV</option>
+            <option value="json" {% if file_type == 'json' %}selected{% endif %}>JSON</option>
+            <option value="jpeg" {% if file_type == 'jpeg' %}selected{% endif %}>JPEG</option>
+            <option value="png" {% if file_type == 'png' %}selected{% endif %}>PNG</option>
+            <!-- Ajoutez d'autres types de fichiers si nécessaire -->
+        </select>
         <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Rechercher</button>
     </form>
     <div class="btn-group btn-group-toggle mb-4" data-toggle="buttons">

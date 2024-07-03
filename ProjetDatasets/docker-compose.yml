@@ -1,6 +1,21 @@
 version: '3.8'
 
 services:
+  web:
+    build: .
+    container_name: django_web
+    command: gunicorn --bind 0.0.0.0:8000 my_project.wsgi:application
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongodb
+    environment:
+      - MONGO_URI=mongodb://PM929:root@mongodb:27017/my_database
+    networks:
+      - mongodb_network
+
   mongodb:
     image: mongo:7.0.0
     container_name: mongodb
@@ -37,7 +52,7 @@ services:
     ports:
       - 8081:8081
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--spider", "--tries=3", "http://admin:admin123@mongo-express:8081"]
+      test: ["CMD", "wget", "--quiet", "--spider", "--tries=3", "http://PM929:root@mongo-express:8081"]
       interval: 30s
       timeout: 10s
       retries: 3

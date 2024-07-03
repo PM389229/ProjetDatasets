@@ -106,6 +106,10 @@ def upload_image_folder(request):
         form = ImageUploadForm()
     return render(request, 'datasets/upload_image_folder.html', {'form': form})
 
+
+
+
+
 def upload_images_to_mongo(image_dir, mongo_uri, user, fichier_type):
     client = MongoClient(mongo_uri)
     collection_name = os.path.basename(image_dir)
@@ -204,6 +208,7 @@ def handle_json(fichier, collection):
 
 
 
+
 @login_required
 def list_datasets(request):
     query = request.GET.get('q', '').lower()
@@ -219,7 +224,7 @@ def list_datasets(request):
 
     # Filtrer les métadonnées par description si une requête est fournie
     if query:
-        filtered_metadata_list = [metadata for metadata in metadata_list if query in metadata.get('description', '').lower()]
+        filtered_metadata_list = [metadata for metadata in metadata_list if query in metadata.get('description', '').lower() or query in metadata.get('titre', '').lower()]
     else:
         filtered_metadata_list = metadata_list
 
@@ -245,17 +250,17 @@ def list_datasets(request):
     # Recherche dans la base de données des dossiers d'images
     db_images = client['my_database_images']
     all_collections_images = db_images.list_collection_names()
+
+    # Récupérer les métadonnées des dossiers d'images
+    image_folder_metadata_list = ImageFolderMetadata.objects.all()
+
     if query:
         collection_names_images = [name for name in all_collections_images if query in name.lower()]
+        image_folder_metadata_list = image_folder_metadata_list.filter(folder_name__icontains=query) | image_folder_metadata_list.filter(description__icontains=query)
     else:
         collection_names_images = all_collections_images
 
     client.close()
-
-    # Récupérer les métadonnées des dossiers d'images
-    image_folder_metadata_list = ImageFolderMetadata.objects.all()
-    if query:
-        image_folder_metadata_list = image_folder_metadata_list.filter(folder_name__icontains=query)
 
     return render(request, 'datasets/list_datasets.html', {
         'datasets': datasets,
@@ -263,6 +268,9 @@ def list_datasets(request):
         'image_folder_metadata_list': image_folder_metadata_list,
         'query': query
     })
+
+
+
 
 
 
