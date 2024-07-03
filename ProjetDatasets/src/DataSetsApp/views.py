@@ -2,7 +2,7 @@ import os
 import csv
 from pymongo import MongoClient
 from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required , user_passes_test
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login, authenticate
@@ -20,6 +20,7 @@ import xml.etree.ElementTree as ET
 import re
 from bson import json_util
 from bson import binary
+from bson.objectid import ObjectId
 
 #Constante pour dossiers d'images
 
@@ -209,6 +210,8 @@ def handle_json(fichier, collection):
 
 
 
+
+
 @login_required
 def list_datasets(request):
     query = request.GET.get('q', '').lower()
@@ -242,6 +245,9 @@ def list_datasets(request):
         except User.DoesNotExist:
             metadata['Auteur'] = "Utilisateur inconnu"
         
+        # Convertir ObjectId en chaîne de caractères
+        metadata['id'] = str(metadata['_id'])
+
         datasets.append({
             'metadata': metadata,
             'sample': dataset_sample
@@ -262,12 +268,59 @@ def list_datasets(request):
 
     client.close()
 
+    # Vérifier si l'utilisateur appartient au groupe 'Professeurs'
+    is_professor = request.user.groups.filter(name='Professeurs').exists()
+
     return render(request, 'datasets/list_datasets.html', {
         'datasets': datasets,
         'collection_names_images': collection_names_images,
         'image_folder_metadata_list': image_folder_metadata_list,
-        'query': query
+        'query': query,
+        'is_professor': is_professor  # Passer cette information au template
     })
+
+
+
+
+
+
+
+
+def is_professor(user):
+    return user.groups.filter(name='Professeurs').exists()
+
+
+
+
+
+
+@login_required
+@user_passes_test(is_professor)
+def delete_dataset(request, dataset_id):
+    try:
+        client = MongoClient(f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@localhost:27017/')
+        db = client['my_database']
+        metadata_collection = db['dataset(metadata)']
+
+        # Supprimer les métadonnées du dataset
+        result = metadata_collection.find_one_and_delete({"_id": ObjectId(dataset_id)})
+        if not result:
+            client.close()
+            return HttpResponse("Dataset non trouvé", status=404)
+
+        # Supprimer la collection associée
+        collection_name = result['titre'].replace(" ", "_").lower()
+        db.drop_collection(collection_name)
+
+        client.close()
+        return redirect('list_datasets')
+    except Exception as e:
+        return HttpResponse(f"Erreur lors de la suppression: {e}", status=500)
+
+
+
+
+
 
 
 
