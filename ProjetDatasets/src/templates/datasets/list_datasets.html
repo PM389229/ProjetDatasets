@@ -8,9 +8,8 @@
             <option value="">Tous les types</option>
             <option value="csv" {% if file_type == 'csv' %}selected{% endif %}>CSV</option>
             <option value="json" {% if file_type == 'json' %}selected{% endif %}>JSON</option>
-            <option value="jpeg" {% if file_type == 'jpeg' %}selected{% endif %}>JPEG</option>
+            <option value="jpg" {% if file_type == 'jpg' %}selected{% endif %}>JPG</option>
             <option value="png" {% if file_type == 'png' %}selected{% endif %}>PNG</option>
-            <!-- Ajoutez d'autres types de fichiers si nécessaire -->
         </select>
         <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Rechercher</button>
     </form>
@@ -25,7 +24,6 @@
 
     <div class="row justify-content-center">
         <div class="col-md-8" id="text_section">
-
             <ul class="list-group">
                 {% for item in datasets %}
                 <li class="list-group-item mb-4 p-4">
@@ -37,8 +35,8 @@
                                 <div class="card-body">
                                     <p><strong>Description:</strong> {{ item.metadata.description }}</p>
                                     <p><strong>Type de fichier:</strong> {{ item.metadata.fichier_type }}</p>
-                                    <p><strong>Uploadé par:</strong> {{ item.metadata.Auteur }}</p>
-                                    <p><strong>Uploadé le:</strong> {{ item.metadata.HeureChargement }}</p>
+                                    <p><strong>Chargé par:</strong> {{ item.metadata.Auteur }}</p>
+                                    <p><strong>Chargé le:</strong> {{ item.metadata.HeureChargement }}</p>
                                 </div>
                             </div>
                         </div>
@@ -70,7 +68,6 @@
         </div>
 
         <div class="col-md-8" id="images_section" style="display:none;">
-
             <ul class="list-group">
                 {% for image_folder_metadata in image_folder_metadata_list %}
                 <li class="list-group-item mb-4 p-4">
@@ -82,18 +79,24 @@
                                 <div class="card-body">
                                     <p><strong>Description:</strong> {{ image_folder_metadata.description }}</p>
                                     <p><strong>Type de fichier:</strong> {{ image_folder_metadata.fichier_type }}</p>
-                                    <p><strong>Uploadé par:</strong> {{ image_folder_metadata.Auteur.username }}</p>
-                                    <p><strong>Uploadé le:</strong> {{ image_folder_metadata.HeureChargement }}</p>
+                                    <p><strong>Chargé par:</strong> {{ image_folder_metadata.Auteur.username }}</p>
+                                    <p><strong>Chargé le:</strong> {{ image_folder_metadata.HeureChargement }}</p>
                                 </div>
                             </div>
                         </div>
                         <div class="dataset-actions ml-3">
                             <a href="{% url 'download_all_images' image_collection_name=image_folder_metadata.folder_name %}" class="btn btn-outline-success btn-sm mt-2">Télécharger</a>
+                            {% if is_professor %}
+                                <form method="POST" action="{% url 'delete_image_folder' folder_name=image_folder_metadata.folder_name %}" style="display: inline;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce dossier d\'images ?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm mt-2">Supprimer</button>
+                                </form>
+                            {% endif %}
                         </div>
                     </div>
                 </li>
                 {% empty %}
-                <li class="list-group-item">Aucune image disponible.</li>
+                <li class="list-group-item">Aucun dataset d'images disponible.</li>
                 {% endfor %}
             </ul>
         </div>

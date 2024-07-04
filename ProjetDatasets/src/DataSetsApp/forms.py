@@ -25,6 +25,6 @@ class ImageUploadForm(forms.Form):
     image_dir = forms.CharField(label='Lien vers le dossier voulu', max_length=255)
     fichier_type = forms.ChoiceField(
         label='Type de fichier',
-        choices=[('png', 'PNG'), ('jpeg', 'JPEG'), ('jpg', 'JPG'), ('gif', 'GIF'), ('bmp', 'BMP')]
+        choices=[('png', 'PNG'), ('jpg', 'JPG')]
     )
     description = forms.CharField(widget=forms.Textarea, required=False, label='Description')

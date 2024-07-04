@@ -1,7 +1,7 @@
 import os
 import csv
 from pymongo import MongoClient
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect , get_object_or_404 
 from django.contrib.auth.decorators import login_required , user_passes_test
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.forms import UserCreationForm
@@ -21,7 +21,9 @@ import re
 from bson import json_util
 from bson import binary
 from bson.objectid import ObjectId
+import logging
 
+logger = logging.getLogger(__name__)
 #Constante pour dossiers d'images
 
 MONGO_URI = 'mongodb://PM929:root@localhost:27017'
@@ -99,8 +101,8 @@ def upload_image_folder(request):
                     fichier_type=fichier_type,
                     Auteur=request.user
                 )
-                
-                return HttpResponse('Upload successful!')
+                # Redirection vers la liste des datasets après un chargement réussi
+                return redirect('list_datasets')
             except Exception as e:
                 return HttpResponse(f"Error during upload: {e}", status=500)
     else:
@@ -208,6 +210,49 @@ def handle_json(fichier, collection):
         raise ValueError(f"An unexpected error occurred: {str(e)}")
 
 
+def is_professor(user):
+    return user.groups.filter(name='Professeurs').exists()
+
+
+
+
+
+
+@login_required
+@user_passes_test(is_professor)
+def delete_image_folder(request, folder_name):
+    logger.info(f"Received folder_name: {folder_name}")
+
+    try:
+        # Connexion à MongoDB avec authentification
+        client = MongoClient(f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@localhost:27017/')
+        db_metadata = client['my_database']
+        db_images = client['my_database_images']
+
+        # Vérifier si le dossier d'images existe dans les métadonnées
+        folder_metadata = db_metadata['datasetimagefolder(metadata)'].find_one({'folder_name': folder_name})
+        if not folder_metadata:
+            logger.error(f"Folder metadata not found for folder_name: {folder_name}")
+            return HttpResponse(f"Dossier d'images non trouvé: {folder_name}", status=404)
+
+        logger.info(f"Found folder metadata: {folder_metadata}")
+
+        # Suppression de la collection d'images
+        logger.info(f"Deleting image collection: {folder_name}")
+        db_images.drop_collection(folder_name)
+
+        # Suppression des métadonnées dans MongoDB
+        logger.info(f"Deleting metadata in MongoDB for folder: {folder_name}")
+        db_metadata['datasetimagefolder(metadata)'].delete_one({'folder_name': folder_name})
+
+        client.close()
+
+        return redirect('list_datasets')
+    except Exception as e:
+        logger.error(f"Erreur lors de la suppression du dossier d'images: {e}")
+        return HttpResponse(f"Erreur lors de la suppression: {e}", status=500)
+
+
 
 
 
@@ -217,69 +262,68 @@ def list_datasets(request):
     query = request.GET.get('q', '').lower()
     client = MongoClient(f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@localhost:27017/')
 
-    # Accéder à la base de données
-    db = client['my_database']
+    try:
+        # Accéder à la base de données
+        db = client['my_database']
 
-    # Récupérer les métadonnées des datasets de texte
-    metadata_collection = db['dataset(metadata)']
-    metadata_list = list(metadata_collection.find())
-    metadata_dict = {metadata['titre'].replace(" ", "_").lower(): metadata for metadata in metadata_list}
+        # Récupérer les métadonnées des datasets de texte
+        metadata_collection = db['dataset(metadata)']
+        metadata_list = list(metadata_collection.find())
+        metadata_dict = {metadata['titre'].replace(" ", "_").lower(): metadata for metadata in metadata_list}
 
-    # Filtrer les métadonnées par description si une requête est fournie
-    if query:
-        filtered_metadata_list = [metadata for metadata in metadata_list if query in metadata.get('description', '').lower() or query in metadata.get('titre', '').lower()]
-    else:
-        filtered_metadata_list = metadata_list
+        # Filtrer les métadonnées par description si une requête est fournie
+        if query:
+            filtered_metadata_list = [metadata for metadata in metadata_list if query in metadata.get('description', '').lower() or query in metadata.get('titre', '').lower()]
+        else:
+            filtered_metadata_list = metadata_list
 
-    # Construire la liste des datasets avec leurs métadonnées et échantillons
-    datasets = []
-    for metadata in filtered_metadata_list:
-        collection_name = metadata['titre'].replace(" ", "_").lower()
-        dataset_sample = list(db[collection_name].find().limit(3))  # Récupérer les trois premières lignes
-        metadata['formatted_titre'] = metadata['titre'].replace(" ", "_").lower()
-        
-        # Récupérer l'utilisateur par ID
-        try:
-            user = User.objects.get(id=metadata['Auteur_id'])
-            metadata['Auteur'] = user.username
-        except User.DoesNotExist:
-            metadata['Auteur'] = "Utilisateur inconnu"
-        
-        # Convertir ObjectId en chaîne de caractères
-        metadata['id'] = str(metadata['_id'])
+        # Construire la liste des datasets avec leurs métadonnées et échantillons
+        datasets = []
+        for metadata in filtered_metadata_list:
+            collection_name = metadata['titre'].replace(" ", "_").lower()
+            dataset_sample = list(db[collection_name].find().limit(3))  # Récupérer les trois premières lignes
+            metadata['formatted_titre'] = metadata['titre'].replace(" ", "_").lower()
+            
+            # Récupérer l'utilisateur par ID
+            try:
+                user = User.objects.get(id=metadata['Auteur_id'])
+                metadata['Auteur'] = user.username
+            except User.DoesNotExist:
+                metadata['Auteur'] = "Utilisateur inconnu"
+            
+            # Convertir ObjectId en chaîne de caractères
+            metadata['id'] = str(metadata['_id'])
 
-        datasets.append({
-            'metadata': metadata,
-            'sample': dataset_sample
+            datasets.append({
+                'metadata': metadata,
+                'sample': dataset_sample
+            })
+
+        # Recherche dans la base de données des dossiers d'images
+        db_images = client['my_database_images']
+        all_collections_images = db_images.list_collection_names()
+
+        # Récupérer les métadonnées des dossiers d'images
+        image_folder_metadata_list = list(db['datasetimagefolder(metadata)'].find())
+
+        if query:
+            collection_names_images = [name for name in all_collections_images if query in name.lower()]
+            image_folder_metadata_list = [metadata for metadata in image_folder_metadata_list if query in metadata.get('folder_name', '').lower() or query in metadata.get('description', '').lower()]
+        else:
+            collection_names_images = all_collections_images
+
+        # Vérifier si l'utilisateur appartient au groupe 'Professeurs'
+        is_professor = request.user.groups.filter(name='Professeurs').exists()
+
+        return render(request, 'datasets/list_datasets.html', {
+            'datasets': datasets,
+            'collection_names_images': collection_names_images,
+            'image_folder_metadata_list': image_folder_metadata_list,
+            'query': query,
+            'is_professor': is_professor  # Passer cette information au template
         })
-
-    # Recherche dans la base de données des dossiers d'images
-    db_images = client['my_database_images']
-    all_collections_images = db_images.list_collection_names()
-
-    # Récupérer les métadonnées des dossiers d'images
-    image_folder_metadata_list = ImageFolderMetadata.objects.all()
-
-    if query:
-        collection_names_images = [name for name in all_collections_images if query in name.lower()]
-        image_folder_metadata_list = image_folder_metadata_list.filter(folder_name__icontains=query) | image_folder_metadata_list.filter(description__icontains=query)
-    else:
-        collection_names_images = all_collections_images
-
-    client.close()
-
-    # Vérifier si l'utilisateur appartient au groupe 'Professeurs'
-    is_professor = request.user.groups.filter(name='Professeurs').exists()
-
-    return render(request, 'datasets/list_datasets.html', {
-        'datasets': datasets,
-        'collection_names_images': collection_names_images,
-        'image_folder_metadata_list': image_folder_metadata_list,
-        'query': query,
-        'is_professor': is_professor  # Passer cette information au template
-    })
-
-
+    finally:
+        client.close()
 
 
 
