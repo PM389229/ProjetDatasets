@@ -8,7 +8,9 @@ WORKDIR /app
 COPY requirements.txt /app/
 
 # Installer les dépendances
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install python-dotenv
 
 # Copier tout le contenu du projet dans le conteneur
 COPY . /app/
@@ -17,4 +19,4 @@ COPY . /app/
 EXPOSE 8000
 
 # Définir la commande de démarrage du conteneur
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "my_project.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "DataSetProjet.wsgi:application"]
