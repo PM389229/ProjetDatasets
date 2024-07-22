@@ -255,43 +255,41 @@ def delete_image_folder(request, folder_name):
 
 
 
-
-
 @login_required
 def list_datasets(request):
     query = request.GET.get('q', '').lower()
+    file_type = request.GET.get('file_type', '').lower()  # Récupérer le type de fichier sélectionné
     client = MongoClient(f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@localhost:27017/')
 
     try:
-        # Accéder à la base de données
         db = client['my_database']
-
-        # Récupérer les métadonnées des datasets de texte
         metadata_collection = db['dataset(metadata)']
         metadata_list = list(metadata_collection.find())
         metadata_dict = {metadata['titre'].replace(" ", "_").lower(): metadata for metadata in metadata_list}
 
-        # Filtrer les métadonnées par description si une requête est fournie
-        if query:
-            filtered_metadata_list = [metadata for metadata in metadata_list if query in metadata.get('description', '').lower() or query in metadata.get('titre', '').lower()]
+        # Filtrer les métadonnées par description et type de fichier si une requête est fournie
+        if query or file_type:
+            filtered_metadata_list = []
+            for metadata in metadata_list:
+                matches_query = query in metadata.get('description', '').lower() or query in metadata.get('titre', '').lower()
+                matches_file_type = file_type == metadata.get('fichier_type', '').lower() if file_type else True
+                if matches_query and matches_file_type:
+                    filtered_metadata_list.append(metadata)
         else:
             filtered_metadata_list = metadata_list
 
-        # Construire la liste des datasets avec leurs métadonnées et échantillons
         datasets = []
         for metadata in filtered_metadata_list:
             collection_name = metadata['titre'].replace(" ", "_").lower()
-            dataset_sample = list(db[collection_name].find().limit(3))  # Récupérer les trois premières lignes
+            dataset_sample = list(db[collection_name].find().limit(3))
             metadata['formatted_titre'] = metadata['titre'].replace(" ", "_").lower()
-            
-            # Récupérer l'utilisateur par ID
+
             try:
                 user = User.objects.get(id=metadata['Auteur_id'])
                 metadata['Auteur'] = user.username
             except User.DoesNotExist:
                 metadata['Auteur'] = "Utilisateur inconnu"
-            
-            # Convertir ObjectId en chaîne de caractères
+
             metadata['id'] = str(metadata['_id'])
 
             datasets.append({
@@ -299,31 +297,34 @@ def list_datasets(request):
                 'sample': dataset_sample
             })
 
-        # Recherche dans la base de données des dossiers d'images
         db_images = client['my_database_images']
-        all_collections_images = db_images.list_collection_names()
+        image_folder_metadata_collection = db['datasetimagefolder(metadata)']
+        image_folder_metadata_list = list(image_folder_metadata_collection.find())
 
-        # Récupérer les métadonnées des dossiers d'images
-        image_folder_metadata_list = list(db['datasetimagefolder(metadata)'].find())
-
-        if query:
-            collection_names_images = [name for name in all_collections_images if query in name.lower()]
-            image_folder_metadata_list = [metadata for metadata in image_folder_metadata_list if query in metadata.get('folder_name', '').lower() or query in metadata.get('description', '').lower()]
+        # Filtrer les dossiers d'images par description et type de fichier si une requête est fournie
+        if query or file_type:
+            filtered_image_folder_metadata_list = []
+            for metadata in image_folder_metadata_list:
+                matches_query = query in metadata.get('description', '').lower() or query in metadata.get('folder_name', '').lower()
+                matches_file_type = file_type == metadata.get('fichier_type', '').lower() if file_type else True
+                if matches_query and matches_file_type:
+                    filtered_image_folder_metadata_list.append(metadata)
         else:
-            collection_names_images = all_collections_images
+            filtered_image_folder_metadata_list = image_folder_metadata_list
 
-        # Vérifier si l'utilisateur appartient au groupe 'Professeurs'
         is_professor = request.user.groups.filter(name='Professeurs').exists()
 
         return render(request, 'datasets/list_datasets.html', {
             'datasets': datasets,
-            'collection_names_images': collection_names_images,
-            'image_folder_metadata_list': image_folder_metadata_list,
+            'image_folder_metadata_list': filtered_image_folder_metadata_list,
             'query': query,
-            'is_professor': is_professor  # Passer cette information au template
+            'file_type': file_type,  # Passer le type de fichier sélectionné au template
+            'is_professor': is_professor
         })
     finally:
         client.close()
+
+
 
 
 
