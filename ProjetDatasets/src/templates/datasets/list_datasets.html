@@ -37,6 +37,13 @@
                                     <p><strong>Type de fichier:</strong> {{ item.metadata.fichier_type }}</p>
                                     <p><strong>Chargé par:</strong> {{ item.metadata.Auteur }}</p>
                                     <p><strong>Chargé le:</strong> {{ item.metadata.HeureChargement }}</p>
+                                    <p><strong>Taille du fichier:</strong> 
+                                        {% if item.metadata.file_size %}
+                                            {{ item.metadata.file_size|floatformat:2 }} KB
+                                        {% else %}
+                                            Inconnue
+                                        {% endif %}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -81,6 +88,13 @@
                                     <p><strong>Type de fichier:</strong> {{ image_folder_metadata.fichier_type }}</p>
                                     <p><strong>Chargé par:</strong> {{ image_folder_metadata.Auteur.username }}</p>
                                     <p><strong>Chargé le:</strong> {{ image_folder_metadata.HeureChargement }}</p>
+                                    <p><strong>Taille du fichier:</strong> 
+                                        {% if image_folder_metadata.file_size %}
+                                            {{ image_folder_metadata.file_size|floatformat:2 }} KB
+                                        {% else %}
+                                            Inconnue
+                                        {% endif %}
+                                    </p>                            
                                 </div>
                             </div>
                         </div>
@@ -157,7 +171,5 @@ function checkSearchResults() {
 
 // Appeler la fonction checkSearchResults lorsque la page est chargée
 window.onload = checkSearchResults;
-
-    
 </script>
 {% endblock %}

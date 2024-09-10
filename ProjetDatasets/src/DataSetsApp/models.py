@@ -10,6 +10,7 @@ class Dataset(models.Model):
     description = models.TextField(blank=True, null=True)
     fichier = models.FileField(upload_to='datasets/')
     fichier_type = models.CharField(max_length=10, choices=(('csv', 'CSV'), ('json', 'JSON')))
+    file_size = models.BigIntegerField(null=True, blank=True)
     Auteur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     HeureChargement = models.DateTimeField(auto_now_add=True)
 
@@ -22,6 +23,7 @@ class Dataset(models.Model):
 class Image(models.Model):
     image_name = models.CharField(max_length=255)
     image_data = models.BinaryField()
+    file_size = models.BigIntegerField(null=True, blank=True)
     Auteur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     HeureChargement = models.DateTimeField(auto_now_add=True)
 

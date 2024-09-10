@@ -90,25 +90,33 @@ def upload_image_folder(request):
             try:
                 if not os.path.exists(image_dir):
                     return HttpResponse(f"Directory {image_dir} does not exist", status=400)
-                
+
+                # Calculer la taille totale des fichiers image dans le répertoire en KB
+                total_size = sum(os.path.getsize(os.path.join(image_dir, f)) for f in os.listdir(image_dir) if f.lower().endswith(f'.{fichier_type}'))
+                total_size_kb = total_size / 1024  # Conversion en kilooctets
+
                 # Uploader les images depuis le répertoire
                 upload_images_to_mongo(image_dir, MONGO_URI, request.user, fichier_type)
-                
-                # Enregistrer les métadonnées du dossier
+
+                # Enregistrer les métadonnées du dossier, y compris la taille en KB
                 folder_name = os.path.basename(image_dir)
                 ImageFolderMetadata.objects.create(
                     folder_name=folder_name,
-                    description=description,    
+                    description=description,
                     fichier_type=fichier_type,
-                    Auteur=request.user
+                    Auteur=request.user,
+                    file_size=total_size_kb  # Taille en kilooctets
                 )
-                # Redirection vers la liste des datasets après un chargement réussi
                 return redirect('list_datasets')
             except Exception as e:
                 return HttpResponse(f"Error during upload: {e}", status=500)
     else:
         form = ImageUploadForm()
     return render(request, 'datasets/upload_image_folder.html', {'form': form})
+
+
+
+
 
 
 
@@ -135,6 +143,7 @@ def upload_images_to_mongo(image_dir, mongo_uri, user, fichier_type):
 
 
 
+
 @login_required
 def upload_dataset(request):
     if not request.user.groups.filter(name='Professeurs').exists():
@@ -144,31 +153,31 @@ def upload_dataset(request):
         form = DatasetForm(request.POST, request.FILES)
         if form.is_valid():
             dataset = form.save(commit=False)
-
-
-            # Définir l'utilisateur connecté comme l'auteur du dataset
             dataset.Auteur = request.user
 
             fichier = request.FILES['fichier']
             fichier_type = fichier.name.split('.')[-1].lower()
+
+            # Calculer la taille du fichier en kilooctets
+            file_size = fichier.size / 1024  # Conversion en kilooctets
+
             if fichier_type in ['csv', 'json']:
                 dataset.fichier_type = fichier_type
             else:
                 return HttpResponse("Type de fichier non supporté", status=400)
 
+            dataset.file_size = file_size  # Enregistrer la taille du fichier en KB
             dataset.save()
 
- 
-
             client = MongoClient(f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@localhost:27017/')
-            db = client['my_database']  # Base de données pour les datasets
+            db = client['my_database']
             collection_name = dataset.titre.replace(" ", "_").lower()
             collection = db[collection_name]
 
             # Nettoyez la collection avant d'insérer de nouveaux documents
             collection.delete_many({})
 
-            # Utilisez les fonctions appropriées pour insérer les données des fichiers
+            # Utiliser les fonctions appropriées pour insérer les données
             if fichier_type == 'csv':
                 handle_csv(fichier, collection)
             elif fichier_type == 'json':
@@ -179,6 +188,7 @@ def upload_dataset(request):
     else:
         form = DatasetForm()
     return render(request, 'datasets/upload_dataset.html', {'form': form})
+
 
 
 
