@@ -1,0 +1,16 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Générer un Dataset avec un Bot</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary mt-3">Générer Dataset</button>
+    </form>
+
+    {% if error %}
+        <div class="alert alert-danger mt-3">{{ error }}</div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -28,3 +28,14 @@ class ImageUploadForm(forms.Form):
         choices=[('png', 'PNG'), ('jpg', 'JPG')]
     )
     description = forms.CharField(widget=forms.Textarea, required=False, label='Description')
+
+
+#Formulaire pour création de datasets avec huggingface avec données réels
+
+class DatasetCreationForm(forms.ModelForm):
+    fichier_type = forms.ChoiceField(choices=[('csv', 'CSV'), ('json', 'JSON')])
+    prompt = forms.CharField(widget=forms.Textarea, label='Prompt', help_text='Entrez le prompt pour générer le dataset.')
+
+    class Meta:
+        model = Dataset
+        fields = ['titre', 'description', 'fichier_type', 'prompt']

@@ -8,7 +8,8 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login, authenticate
 from django.views.decorators.csrf import csrf_exempt
 from .models import Dataset , ImageFolderMetadata
-from .forms import DatasetForm, ImageUploadForm
+from .forms import DatasetForm, ImageUploadForm , DatasetCreationForm
+from .HuggingBot import generate_dataset_with_bot
 from django.http import HttpResponse
 from django.conf import settings
 import io
@@ -255,6 +256,10 @@ def delete_image_folder(request, folder_name):
 
 
 
+
+
+
+
 @login_required
 def list_datasets(request):
     query = request.GET.get('q', '').lower()
@@ -267,7 +272,7 @@ def list_datasets(request):
         metadata_list = list(metadata_collection.find())
         metadata_dict = {metadata['titre'].replace(" ", "_").lower(): metadata for metadata in metadata_list}
 
-        # Filtrer les métadonnées par description et type de fichier si une requête est fournie
+        # Filtrer les métadonnées par description/titre et type de fichier si une requête est fournie
         if query or file_type:
             filtered_metadata_list = []
             for metadata in metadata_list:
@@ -301,7 +306,7 @@ def list_datasets(request):
         image_folder_metadata_collection = db['datasetimagefolder(metadata)']
         image_folder_metadata_list = list(image_folder_metadata_collection.find())
 
-        # Filtrer les dossiers d'images par description et type de fichier si une requête est fournie
+        # Filtrer les dossiers d'images par description/titre et type de fichier si une requête est fournie
         if query or file_type:
             filtered_image_folder_metadata_list = []
             for metadata in image_folder_metadata_list:
@@ -366,6 +371,95 @@ def delete_dataset(request, dataset_id):
 
 
 
+
+
+@login_required
+def generate_dataset_view(request):
+    if request.method == 'POST':
+        form = DatasetCreationForm(request.POST)
+        if form.is_valid():
+            dataset = form.save(commit=False)
+            dataset.Auteur = request.user
+
+            prompt = form.cleaned_data['prompt']
+            fichier_type = form.cleaned_data['fichier_type']
+
+            # Générer les données avec le bot
+            bot_response = generate_dataset_with_bot(prompt)
+
+            if bot_response:  # Vérifier si le JSON a été chargé correctement
+                # Connexion à MongoDB
+                client = MongoClient(f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@localhost:27017/')
+                db = client['my_database']
+                collection_name = dataset.titre.replace(" ", "_").lower()
+                collection = db[collection_name]
+
+                try:
+                    if fichier_type == 'json':
+                        # Insertion dans la base de données
+                        collection.insert_many(bot_response if isinstance(bot_response, list) else [bot_response])
+                    elif fichier_type == 'csv':
+                        # Traiter la réponse CSV
+                        reader = csv.DictReader(bot_response.splitlines())
+                        for row in reader:
+                            collection.insert_one(row)
+                except Exception as e:
+                    return render(request, 'datasets/generate_dataset.html', {'form': form, 'error': str(e)})
+
+                # Sauvegarder le dataset et fermer la connexion MongoDB
+                dataset.save()
+                client.close()
+                return redirect('view_dataset')
+            else:
+                return render(request, 'datasets/generate_dataset.html', {'form': form, 'error': "Erreur dans la réponse du bot."})
+    else:
+        form = DatasetCreationForm()
+
+    return render(request, 'datasets/generate_dataset.html', {'form': form})
+
+
+
+
+
+@login_required
+def view_dataset_view(request):
+    generated_data = request.session.get('generated_data')
+    form_data = request.session.get('form_data')
+
+    if not generated_data:
+        return redirect('generate_dataset')  # Rediriger si aucune donnée n'est présente
+
+    if request.method == 'POST':
+        form = DatasetCreationForm(request.POST)
+        if form.is_valid():
+            dataset = form.save(commit=False)
+            dataset.Auteur = request.user
+
+            fichier_type = form.cleaned_data['fichier_type']
+
+            # Connecter à MongoDB
+            client = MongoClient(f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@localhost:27017/')
+            db = client['my_database']
+            collection_name = dataset.titre.replace(" ", "_").lower()
+            collection = db[collection_name]
+
+            try:
+                if fichier_type == 'json':
+                    json_data = json.loads(generated_data)
+                    collection.insert_many(json_data if isinstance(json_data, list) else [json_data])
+                elif fichier_type == 'csv':
+                    reader = csv.DictReader(generated_data.splitlines())
+                    collection.insert_many(list(reader))
+            except Exception as e:
+                return render(request, 'datasets/view_dataset.html', {'form': form, 'generated_data': generated_data, 'error': str(e)})
+
+            dataset.save()
+            client.close()
+            return redirect('list_datasets')
+    else:
+        form = DatasetCreationForm(form_data)  # Remplir le formulaire avec les données précédentes
+
+    return render(request, 'datasets/view_dataset.html', {'form': form, 'generated_data': generated_data})
 
 
 

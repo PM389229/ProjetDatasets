@@ -13,4 +13,6 @@ urlpatterns = [
     path('delete_dataset/<str:dataset_id>/', views.delete_dataset, name='delete_dataset'),
     path('download_data/<str:collection_name>/<str:fichier_type>/', views.download_data, name='download_data'),
     path('download_all_images/<str:image_collection_name>/', views.download_all_images, name='download_all_images'),
+    path('generate_dataset/', views.generate_dataset_view, name='generate_dataset'),
+    path('view_dataset/', views.view_dataset_view, name='view_dataset'),
 ]

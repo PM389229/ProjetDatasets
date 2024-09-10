@@ -1,0 +1,18 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Visualiser et Enregistrer le Dataset</h2>
+    <pre>{{ generated_data }}</pre>  <!-- Affiche les données générées -->
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-success mt-3">Enregistrer Dataset</button>
+    </form>
+
+    {% if error %}
+        <div class="alert alert-danger mt-3">{{ error }}</div>
+    {% endif %}
+</div>
+{% endblock %}

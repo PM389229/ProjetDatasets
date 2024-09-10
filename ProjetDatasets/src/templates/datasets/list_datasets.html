@@ -62,7 +62,7 @@
                     </div>
                 </li>
                 {% empty %}
-                <li class="list-group-item">Aucun dataset de texte disponible.</li>
+                <li class="list-group-item empty">Aucun dataset de texte disponible.</li>
                 {% endfor %}
             </ul>
         </div>
@@ -96,7 +96,7 @@
                     </div>
                 </li>
                 {% empty %}
-                <li class="list-group-item">Aucun dataset d'images disponible.</li>
+                <li class="list-group-item empty">Aucun dataset d'images disponible.</li>
                 {% endfor %}
             </ul>
         </div>
@@ -104,35 +104,60 @@
 </div>
 
 <script>
-    function toggleVisibility(selectedType) {
-        var textSection = document.getElementById('text_section');
-        var imagesSection = document.getElementById('images_section');
+function toggleVisibility(selectedType) {
+    var textSection = document.getElementById('text_section');
+    var imagesSection = document.getElementById('images_section');
 
-        if (selectedType === 'text') {
-            textSection.style.display = 'block';
-            imagesSection.style.display = 'none';
-        } else {
-            textSection.style.display = 'none';
-            imagesSection.style.display = 'block';
-        }
+    if (selectedType === 'text') {
+        textSection.style.display = 'block';
+        imagesSection.style.display = 'none';
+    } else {
+        textSection.style.display = 'none';
+        imagesSection.style.display = 'block';
     }
+}
 
-    function toggleInfo(id) {
-        var infoDiv = document.getElementById(id);
-        if (infoDiv.style.display === 'none') {
-            infoDiv.style.display = 'block';
-        } else {
-            infoDiv.style.display = 'none';
-        }
+function toggleInfo(id) {
+    var infoDiv = document.getElementById(id);
+    if (infoDiv.style.display === 'none') {
+        infoDiv.style.display = 'block';
+    } else {
+        infoDiv.style.display = 'none';
     }
+}
 
-    function toggleSample(id) {
-        var sampleDiv = document.getElementById(id);
-        if (sampleDiv.style.display === 'none') {
-            sampleDiv.style.display = 'block';
-        } else {
-            sampleDiv.style.display = 'none';
-        }
+function toggleSample(id) {
+    var sampleDiv = document.getElementById(id);
+    if (sampleDiv.style.display === 'none') {
+        sampleDiv.style.display = 'block';
+    } else {
+        sampleDiv.style.display = 'none';
     }
+}
+
+// Nouvelle fonction pour vérifier les résultats de la recherche
+function checkSearchResults() {
+    var textResults = document.querySelectorAll('#text_section .list-group-item:not(.empty)');
+    var imagesResults = document.querySelectorAll('#images_section .list-group-item:not(.empty)');
+
+    if (textResults.length > 0 && imagesResults.length > 0) {
+        // Il y a des résultats dans les deux sections, afficher la section texte par défaut
+        toggleVisibility('text');
+    } else if (textResults.length > 0) {
+        // Il y a des résultats dans la section texte seulement, afficher la section texte
+        toggleVisibility('text');
+    } else if (imagesResults.length > 0) {
+        // Il y a des résultats dans la section images seulement, afficher la section images
+        toggleVisibility('images');
+    } else {
+        // Il n'y a pas de résultats, afficher la section texte par défaut
+        toggleVisibility('text');
+    }
+}
+
+// Appeler la fonction checkSearchResults lorsque la page est chargée
+window.onload = checkSearchResults;
+
+    
 </script>
 {% endblock %}
