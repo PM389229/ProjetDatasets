@@ -27,20 +27,20 @@
                     <ul class="navbar-nav ml-auto w-100 justify-content-around">
                         <!-- Lien vers la page des datasets -->
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'list_datasets' %}">Datasets</a>
+                            <a class="nav-link" href="{% url 'list_datasets' %}">Les Bases de Données</a>
                         </li>
     
                         {% if user.is_authenticated %}
                             <!-- Liens pour les utilisateurs authentifiés -->
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'upload_dataset' %}">Charger un dataset</a>
+                                <a class="nav-link" href="{% url 'upload_dataset' %}">Déposer une base de données</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'upload_image_folder' %}">Charger un dossier images</a>
+                                <a class="nav-link" href="{% url 'upload_image_folder' %}">Déposer un dossier images</a>
                             </li>
                             <!-- Nouveau lien pour créer un dataset -->
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'generate_dataset' %}">Créer un dataset</a>
+                                <a class="nav-link" href="{% url 'generate_dataset' %}">Créer une base de données</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="{% url 'logout' %}">Se déconnecter</a>

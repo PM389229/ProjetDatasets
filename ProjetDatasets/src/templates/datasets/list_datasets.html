@@ -13,124 +13,82 @@
         </select>
         <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Rechercher</button>
     </form>
-    <div class="btn-group btn-group-toggle mb-4" data-toggle="buttons">
-        <label class="btn btn-secondary active">
-            <input type="radio" name="dataset_type" id="text" value="text" checked autocomplete="off" onclick="toggleVisibility('text');"> Datasets de Texte
-        </label>
-        <label class="btn btn-secondary">
-            <input type="radio" name="dataset_type" id="images" value="images" autocomplete="off" onclick="toggleVisibility('images');"> Datasets d'Images
-        </label>
-    </div>
 
     <div class="row justify-content-center">
-        <div class="col-md-8" id="text_section">
-            <ul class="list-group">
-                {% for item in datasets %}
-                <li class="list-group-item mb-4 p-4">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="dataset-info">
-                            <h2>{{ item.metadata.titre }}</h2>
-                            <button class="btn btn-info btn-sm mt-2" onclick="toggleInfo('text-info-{{ forloop.counter }}')">Plus d'infos</button>
-                            <div id="text-info-{{ forloop.counter }}" class="mt-3 card" style="display: none;">
-                                <div class="card-body">
-                                    <p><strong>Description:</strong> {{ item.metadata.description }}</p>
-                                    <p><strong>Type de fichier:</strong> {{ item.metadata.fichier_type }}</p>
-                                    <p><strong>Chargé par:</strong> {{ item.metadata.Auteur }}</p>
-                                    <p><strong>Chargé le:</strong> {{ item.metadata.HeureChargement }}</p>
-                                    <p><strong>Taille du fichier:</strong> 
-                                        {% if item.metadata.file_size %}
-                                            {{ item.metadata.file_size|floatformat:2 }} KB
-                                        {% else %}
-                                            Inconnue
-                                        {% endif %}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="dataset-actions ml-3">
-                            <a href="javascript:void(0);" class="btn btn-outline-primary btn-sm mt-2" onclick="toggleSample('sample-{{ forloop.counter }}')">Aperçu</a>
-                            <div id="sample-{{ forloop.counter }}" class="mt-3 card" style="display: none;">
-                                <div class="card-body">
-                                    <pre>
-                                        {% for sample in item.sample %}
-                                            {{ sample }}
-                                        {% endfor %}
-                                    </pre>
-                                </div>
-                            </div>
-                            <a href="{% url 'download_data' collection_name=item.metadata.formatted_titre fichier_type=item.metadata.fichier_type %}" class="btn btn-outline-success btn-sm mt-2">Télécharger</a>
-                            {% if is_professor %}
-                                <form method="POST" action="{% url 'delete_dataset' dataset_id=item.metadata.id %}" style="display: inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline-danger btn-sm mt-2" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce dataset ?')">Supprimer</button>
-                                </form>
-                            {% endif %}
+        <ul class="list-group col-md-8">
+            {% for item in all_results %}
+            <li class="list-group-item mb-4 p-4" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div class="dataset-info">
+                    <h2>
+                        {% if item.type == 'text' %}
+                            {{ item.metadata.titre }}
+                        {% else %}
+                            {{ item.metadata.folder_name }}
+                        {% endif %}
+                    </h2>
+                    <p><strong>Type:</strong> 
+                        {% if item.type == 'text' %}
+                            Dataset de Texte
+                        {% else %}
+                            Dossier d'Images
+                        {% endif %}
+                    </p>
+                    <button class="btn btn-info btn-sm mt-2" onclick="toggleInfo('info-{{ forloop.counter }}')">Plus d'infos</button>
+                    <div id="info-{{ forloop.counter }}" class="mt-3 card" style="display: none;">
+                        <div class="card-body">
+                            <p><strong>Chargé le:</strong> {{ item.metadata.HeureChargement }}</p>
+                            <p><strong>Taille du fichier:</strong> 
+                                {% if item.metadata.file_size %}
+                                    {{ item.metadata.file_size|floatformat:2 }} MB
+                                {% else %}
+                                    Inconnue
+                                {% endif %}
+                            </p>
+                            <p><strong>Description:</strong> {{ item.metadata.description }}</p>
+                            <p><strong>Mots Clefs:</strong> {{ item.metadata.mots_clefs|default:"Non spécifiés" }}</p>
+                            <p><strong>Type de fichier:</strong> {{ item.metadata.fichier_type }}</p>
+                            <p><strong>Chargé par:</strong> {{ item.metadata.Auteur }}</p>
                         </div>
                     </div>
-                </li>
-                {% empty %}
-                <li class="list-group-item empty">Aucun dataset de texte disponible.</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <div class="col-md-8" id="images_section" style="display:none;">
-            <ul class="list-group">
-                {% for image_folder_metadata in image_folder_metadata_list %}
-                <li class="list-group-item mb-4 p-4">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="dataset-info">
-                            <h2>{{ image_folder_metadata.folder_name }}</h2>
-                            <button class="btn btn-info btn-sm mt-2" onclick="toggleInfo('image-info-{{ forloop.counter }}')">Plus d'infos</button>
-                            <div id="image-info-{{ forloop.counter }}" class="mt-3 card" style="display: none;">
-                                <div class="card-body">
-                                    <p><strong>Description:</strong> {{ image_folder_metadata.description }}</p>
-                                    <p><strong>Type de fichier:</strong> {{ image_folder_metadata.fichier_type }}</p>
-                                    <p><strong>Chargé par:</strong> {{ image_folder_metadata.Auteur.username }}</p>
-                                    <p><strong>Chargé le:</strong> {{ image_folder_metadata.HeureChargement }}</p>
-                                    <p><strong>Taille du fichier:</strong> 
-                                        {% if image_folder_metadata.file_size %}
-                                            {{ image_folder_metadata.file_size|floatformat:2 }} KB
-                                        {% else %}
-                                            Inconnue
-                                        {% endif %}
-                                    </p>                            
-                                </div>
+                </div>
+                <div class="dataset-actions" style="margin-left: auto;">
+                    {% if item.type == 'text' %}
+                        <a href="javascript:void(0);" class="btn btn-outline-primary btn-sm mt-2" onclick="toggleSample('sample-{{ forloop.counter }}')">Aperçu</a>
+                        <div id="sample-{{ forloop.counter }}" class="mt-3 card" style="display: none;">
+                            <div class="card-body">
+                                <pre>
+                                    {% for sample in item.sample %}
+                                        {{ sample }}
+                                    {% endfor %}
+                                </pre>
                             </div>
                         </div>
-                        <div class="dataset-actions ml-3">
-                            <a href="{% url 'download_all_images' image_collection_name=image_folder_metadata.folder_name %}" class="btn btn-outline-success btn-sm mt-2">Télécharger</a>
-                            {% if is_professor %}
-                                <form method="POST" action="{% url 'delete_image_folder' folder_name=image_folder_metadata.folder_name %}" style="display: inline;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce dossier d\'images ?');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline-danger btn-sm mt-2">Supprimer</button>
-                                </form>
-                            {% endif %}
-                        </div>
-                    </div>
-                </li>
-                {% empty %}
-                <li class="list-group-item empty">Aucun dataset d'images disponible.</li>
-                {% endfor %}
-            </ul>
-        </div>
+                        <a href="{% url 'download_data' collection_name=item.metadata.formatted_titre fichier_type=item.metadata.fichier_type %}" class="btn btn-outline-success btn-sm mt-2">Télécharger</a>
+                    {% else %}
+                        <a href="{% url 'download_all_images' image_collection_name=item.metadata.folder_name %}" class="btn btn-outline-success btn-sm mt-2">Télécharger</a>
+                    {% endif %}
+                    
+                    {% if is_professor %}
+                    <form method="POST" 
+                          action="{% if item.type == 'text' %}{% url 'delete_dataset' dataset_id=item.metadata.id %}{% else %}{% url 'delete_image_folder' folder_name=item.metadata.folder_name %}{% endif %}" 
+                          style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm mt-2" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce {% if item.type == 'text' %}dataset{% else %}dossier d\'images{% endif %} ?')">
+                            Supprimer
+                        </button>
+                    </form>
+                {% endif %}
+                
+                </div>
+            </li>
+            {% empty %}
+            <li class="list-group-item empty">Aucun dataset ou dossier d'images disponible.</li>
+            {% endfor %}
+        </ul>
     </div>
 </div>
 
 <script>
-function toggleVisibility(selectedType) {
-    var textSection = document.getElementById('text_section');
-    var imagesSection = document.getElementById('images_section');
-
-    if (selectedType === 'text') {
-        textSection.style.display = 'block';
-        imagesSection.style.display = 'none';
-    } else {
-        textSection.style.display = 'none';
-        imagesSection.style.display = 'block';
-    }
-}
-
 function toggleInfo(id) {
     var infoDiv = document.getElementById(id);
     if (infoDiv.style.display === 'none') {
@@ -148,28 +106,5 @@ function toggleSample(id) {
         sampleDiv.style.display = 'none';
     }
 }
-
-// Nouvelle fonction pour vérifier les résultats de la recherche
-function checkSearchResults() {
-    var textResults = document.querySelectorAll('#text_section .list-group-item:not(.empty)');
-    var imagesResults = document.querySelectorAll('#images_section .list-group-item:not(.empty)');
-
-    if (textResults.length > 0 && imagesResults.length > 0) {
-        // Il y a des résultats dans les deux sections, afficher la section texte par défaut
-        toggleVisibility('text');
-    } else if (textResults.length > 0) {
-        // Il y a des résultats dans la section texte seulement, afficher la section texte
-        toggleVisibility('text');
-    } else if (imagesResults.length > 0) {
-        // Il y a des résultats dans la section images seulement, afficher la section images
-        toggleVisibility('images');
-    } else {
-        // Il n'y a pas de résultats, afficher la section texte par défaut
-        toggleVisibility('text');
-    }
-}
-
-// Appeler la fonction checkSearchResults lorsque la page est chargée
-window.onload = checkSearchResults;
 </script>
 {% endblock %}
