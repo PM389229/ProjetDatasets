@@ -28,9 +28,9 @@
                     </h2>
                     <p><strong>Type:</strong> 
                         {% if item.type == 'text' %}
-                            Dataset de Texte
+                            Texte
                         {% else %}
-                            Dossier d'Images
+                            Image
                         {% endif %}
                     </p>
                     <button class="btn btn-info btn-sm mt-2" onclick="toggleInfo('info-{{ forloop.counter }}')">Plus d'infos</button>
@@ -65,6 +65,16 @@
                         </div>
                         <a href="{% url 'download_data' collection_name=item.metadata.formatted_titre fichier_type=item.metadata.fichier_type %}" class="btn btn-outline-success btn-sm mt-2">Télécharger</a>
                     {% else %}
+                        <a href="javascript:void(0);" class="btn btn-outline-primary btn-sm mt-2" onclick="toggleSample('sample-{{ forloop.counter }}')">Aperçu</a>
+                        <div id="sample-{{ forloop.counter }}" class="mt-3 card" style="display: none;">
+                            <div class="card-body">
+                                <div class="image-preview">
+                                    {% for image in item.sample %}
+                                        <img src="data:image/png;base64,{{ image.image_data }}" alt="{{ image.image_name }}" style="max-width: 100px; max-height: 100px; margin-right: 10px;">
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
                         <a href="{% url 'download_all_images' image_collection_name=item.metadata.folder_name %}" class="btn btn-outline-success btn-sm mt-2">Télécharger</a>
                     {% endif %}
                     

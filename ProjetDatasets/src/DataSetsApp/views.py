@@ -23,6 +23,8 @@ from bson import json_util
 from bson import binary
 from bson.objectid import ObjectId
 import logging
+from PIL import Image
+import io
 
 logger = logging.getLogger(__name__)
 #Constante pour dossiers d'images
@@ -87,22 +89,24 @@ def upload_image_folder(request):
             image_dir = form.cleaned_data['image_dir']
             fichier_type = form.cleaned_data['fichier_type']
             description = form.cleaned_data['description']
+            mots_clefs = form.cleaned_data['mots_clefs']
             try:
                 if not os.path.exists(image_dir):
                     return HttpResponse(f"Directory {image_dir} does not exist", status=400)
 
                 # Calculer la taille totale des fichiers image dans le répertoire en KB
                 total_size = sum(os.path.getsize(os.path.join(image_dir, f)) for f in os.listdir(image_dir) if f.lower().endswith(f'.{fichier_type}'))
-                total_size_kb = total_size / 1024  # Conversion en kilooctets
+                total_size_kb = total_size / (1024*1024) # Conversion en megaoctets
 
                 # Uploader les images depuis le répertoire
                 upload_images_to_mongo(image_dir, MONGO_URI, request.user, fichier_type)
 
-                # Enregistrer les métadonnées du dossier, y compris la taille en KB
+                # Enregistrer les métadonnées du dossier, y compris la taille en MB
                 folder_name = os.path.basename(image_dir)
                 ImageFolderMetadata.objects.create(
                     folder_name=folder_name,
                     description=description,
+                    mots_clefs=mots_clefs,
                     fichier_type=fichier_type,
                     Auteur=request.user,
                     file_size=total_size_kb  # Taille en kilooctets
@@ -133,13 +137,32 @@ def upload_images_to_mongo(image_dir, mongo_uri, user, fichier_type):
             image_path = os.path.join(image_dir, image_file)
             with open(image_path, 'rb') as file:
                 encoded_image = binary.Binary(file.read())
+
+                # Générer une miniature avec PIL
+                with Image.open(image_path) as img:
+                    img.thumbnail((100, 100))
+
+                    thumb_io = io.BytesIO()
+
+                    # Utiliser 'JPEG' au lieu de 'JPG' pour PIL
+                    if fichier_type.upper() == 'JPG':
+                        img_format = 'JPEG'
+                    else:
+                        img_format = fichier_type.upper()
+
+                    img.save(thumb_io, format=img_format)
+                    encoded_thumb = binary.Binary(thumb_io.getvalue())
+
+                # Insérer à la fois l'image originale et la miniature
                 image_document = {
                     'image_name': image_file,
-                    'image_data': encoded_image
+                    'image_data': encoded_image,
+                    'thumbnail_data': encoded_thumb  # Stocker la miniature
                 }
                 collection.insert_one(image_document)
 
     client.close()
+
 
 
 
@@ -159,7 +182,7 @@ def upload_dataset(request):
             fichier_type = fichier.name.split('.')[-1].lower()
 
             # Calculer la taille du fichier en kilooctets
-            file_size = fichier.size / 1024  # Conversion en kilooctets
+            file_size = fichier.size / (1024 * 1024)  # Conversion en kilooctets
 
             if fichier_type in ['csv', 'json']:
                 dataset.fichier_type = fichier_type
@@ -277,22 +300,23 @@ def list_datasets(request):
     client = MongoClient(f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@localhost:27017/')
 
     try:
-        db = client['my_database']
-        metadata_collection = db['dataset(metadata)']
-        image_folder_metadata_collection = db['datasetimagefolder(metadata)']
+        # Connexion à la base de données MongoDB pour les métadonnées et les images
+        db_metadata = client['my_database']
+        db_images = client['my_database_images']  # Définition de db_images ici
+        metadata_collection = db_metadata['dataset(metadata)']
+        image_folder_metadata_collection = db_metadata['datasetimagefolder(metadata)']
 
         # Obtenir toutes les métadonnées des datasets texte et images
         metadata_list = list(metadata_collection.find())
         image_folder_metadata_list = list(image_folder_metadata_collection.find())
 
-        # Fusionner les deux types de résultats (datasets texte et images)
         all_results = []
 
         # Traiter les datasets texte
         for metadata in metadata_list:
             collection_name = metadata['titre'].replace(" ", "_").lower()
-            dataset_sample = list(db[collection_name].find().limit(3))
-            metadata['formatted_titre'] = metadata['titre'].replace(" ", "_").lower()
+            dataset_sample = list(db_metadata[collection_name].find().limit(3))
+            metadata['formatted_titre'] = collection_name
 
             try:
                 user = User.objects.get(id=metadata['Auteur_id'])
@@ -312,7 +336,12 @@ def list_datasets(request):
                 metadata['Auteur'] = "Utilisateur inconnu"
 
             metadata['id'] = str(metadata['_id'])
-            all_results.append({'type': 'image', 'metadata': metadata})
+
+            # Récupérer un échantillon d'images (miniatures) depuis la collection d'images
+            image_collection = db_images[metadata['folder_name']]  # db_images est maintenant défini
+            sample_images = list(image_collection.find({}, {'image_data': 1, 'image_name': 1}).limit(3))
+
+            all_results.append({'type': 'image', 'metadata': metadata, 'sample': sample_images})
 
         # Appliquer les filtres de recherche
         if query or file_type:
