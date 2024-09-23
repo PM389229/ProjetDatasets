@@ -25,6 +25,7 @@ from bson.objectid import ObjectId
 import logging
 from PIL import Image
 import io
+import base64
 
 logger = logging.getLogger(__name__)
 #Constante pour dossiers d'images
@@ -144,16 +145,19 @@ def upload_images_to_mongo(image_dir, mongo_uri, user, fichier_type):
 
                     thumb_io = io.BytesIO()
 
-                    # Utiliser 'JPEG' au lieu de 'JPG' pour PIL
-                    if fichier_type.upper() == 'JPG':
+
+                    # Gérer 'JPEG' pour les fichiers 'jpg' et 'PNG' pour les fichiers 'png'
+                    if fichier_type.lower() == 'jpg' or fichier_type.lower() == 'jpeg':
                         img_format = 'JPEG'
+                    elif fichier_type.lower() == 'png':
+                        img_format = 'PNG'
                     else:
-                        img_format = fichier_type.upper()
+                        raise ValueError(f"Format d'image non supporté : {fichier_type}")
 
                     img.save(thumb_io, format=img_format)
                     encoded_thumb = binary.Binary(thumb_io.getvalue())
 
-                # Insérer à la fois l'image originale et la miniature
+                # Insérer à la fois l'image originale et la miniature dans MongoDB
                 image_document = {
                     'image_name': image_file,
                     'image_data': encoded_image,
@@ -339,16 +343,25 @@ def list_datasets(request):
 
             # Récupérer un échantillon d'images (miniatures) depuis la collection d'images
             image_collection = db_images[metadata['folder_name']]  # db_images est maintenant défini
-            sample_images = list(image_collection.find({}, {'image_data': 1, 'image_name': 1}).limit(3))
+            # On ne récupère que les miniatures ici (thumbnail_data)
+            sample_images = list(image_collection.find({}, {'thumbnail_data': 1, 'image_name': 1}).limit(3))
+
+            # Encodage base64 des miniatures pour l'affichage
+            for image in sample_images:
+                if 'thumbnail_data' in image:
+                    image['thumbnail_data'] = base64.b64encode(image['thumbnail_data']).decode('utf-8')
 
             all_results.append({'type': 'image', 'metadata': metadata, 'sample': sample_images})
 
         # Appliquer les filtres de recherche
+        filtered_results = []
         if query or file_type:
-            filtered_results = []
             for item in all_results:
                 metadata = item['metadata']
-                matches_query = query in metadata.get('description', '').lower() or query in metadata.get('titre', '').lower() or query in metadata.get('folder_name', '').lower() or query in metadata.get('mots_clefs', '').lower()
+                matches_query = query in metadata.get('description', '').lower() or \
+                                query in metadata.get('titre', '').lower() or \
+                                query in metadata.get('folder_name', '').lower() or \
+                                query in metadata.get('mots_clefs', '').lower()
                 matches_file_type = file_type == metadata.get('fichier_type', '').lower() if file_type else True
                 if matches_query and matches_file_type:
                     filtered_results.append(item)

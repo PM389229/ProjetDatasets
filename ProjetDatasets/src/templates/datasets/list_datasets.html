@@ -70,8 +70,12 @@
                             <div class="card-body">
                                 <div class="image-preview">
                                     {% for image in item.sample %}
-                                        <img src="data:image/png;base64,{{ image.image_data }}" alt="{{ image.image_name }}" style="max-width: 100px; max-height: 100px; margin-right: 10px;">
-                                    {% endfor %}
+                                    {% if item.metadata.fichier_type == 'jpg' or item.metadata.fichier_type == 'jpeg' %}
+                                        <img src="data:image/jpeg;base64,{{ image.thumbnail_data }}" alt="{{ image.image_name }}" style="max-width: 100px; max-height: 100px; margin-right: 10px;">
+                                    {% elif item.metadata.fichier_type == 'png' %}
+                                        <img src="data:image/png;base64,{{ image.thumbnail_data }}" alt="{{ image.image_name }}" style="max-width: 100px; max-height: 100px; margin-right: 10px;">
+                                    {% endif %}
+                                {% endfor %}                                
                                 </div>
                             </div>
                         </div>
