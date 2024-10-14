@@ -95,14 +95,13 @@ def upload_image_folder(request):
                 if not os.path.exists(image_dir):
                     return HttpResponse(f"Directory {image_dir} does not exist", status=400)
 
-                # Calculer la taille totale des fichiers image dans le répertoire en KB
                 total_size = sum(os.path.getsize(os.path.join(image_dir, f)) for f in os.listdir(image_dir) if f.lower().endswith(f'.{fichier_type}'))
-                total_size_kb = total_size / (1024*1024) # Conversion en megaoctets
+                total_size_kb = total_size / (1024*1024)  # Conversion en megaoctets
 
                 # Uploader les images depuis le répertoire
                 upload_images_to_mongo(image_dir, MONGO_URI, request.user, fichier_type)
 
-                # Enregistrer les métadonnées du dossier, y compris la taille en MB
+                # Enregistrer les métadonnées du dossier
                 folder_name = os.path.basename(image_dir)
                 ImageFolderMetadata.objects.create(
                     folder_name=folder_name,
@@ -110,7 +109,7 @@ def upload_image_folder(request):
                     mots_clefs=mots_clefs,
                     fichier_type=fichier_type,
                     Auteur=request.user,
-                    file_size=total_size_kb  # Taille en kilooctets
+                    file_size=total_size_kb
                 )
                 return redirect('list_datasets')
             except Exception as e:
@@ -118,6 +117,7 @@ def upload_image_folder(request):
     else:
         form = ImageUploadForm()
     return render(request, 'datasets/upload_image_folder.html', {'form': form})
+
 
 
 
@@ -146,11 +146,17 @@ def upload_images_to_mongo(image_dir, mongo_uri, user, fichier_type):
                     thumb_io = io.BytesIO()
 
 
-                    # Gérer 'JPEG' pour les fichiers 'jpg' et 'PNG' pour les fichiers 'png'
+                    # Gestion des formats
                     if fichier_type.lower() == 'jpg' or fichier_type.lower() == 'jpeg':
                         img_format = 'JPEG'
                     elif fichier_type.lower() == 'png':
                         img_format = 'PNG'
+                    elif fichier_type.lower() == 'gif':
+                        img_format = 'GIF'
+                    elif fichier_type.lower() == 'webp':
+                        img_format = 'WEBP'
+                    elif fichier_type.lower() == 'tiff':
+                        img_format = 'TIFF'
                     else:
                         raise ValueError(f"Format d'image non supporté : {fichier_type}")
 
