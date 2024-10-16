@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Chatbot</h1>
+        <form method="POST">
+            {% csrf_token %}
+
+            <!-- Champ caché pour l'email -->
+            <input type="hidden" name="email" value="pmguevel29@gmail.com">
+
+            <!-- Champ caché pour le mot de passe -->
+            <input type="hidden" name="password" value="Lrk389229!">
+
+
+    <!-- Champ pour le nombre de lignes -->
+    <div class="form-group">
+        <label for="prompt">Demande : </label>
+        <!-- Champ de texte avec une phrase pré-remplie -->
+        <input type="text" id="prompt" name="prompt" class="form-control" 
+               value="Je veux un CSV de [lignes] lignes par [colonnes] colonnes sur [sujet]" required>
+    </div>
+
+            <button type="submit" class="btn btn-primary">Envoyer</button>
+        </form>
+
+        <!-- Affichage de la réponse du chatbot -->
+        {% if response %}
+            <div class="mt-4">
+                <h3>Réponse du chatbot :</h3>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Index</th>
+                            <th>Réponse</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td> <!-- Logique dynamique pour l'index -->
+                            <td>{{ response }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <a href="{% url 'download_chatbot_response' %}" class="btn btn-primary">Télécharger la réponse</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

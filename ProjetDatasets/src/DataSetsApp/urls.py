@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views # Importation des vues depuis le fichier views.py
-
+from .views import download_chatbot_response
 
 # On définit ici les routes (ou urlpatterns) pour notre application
 urlpatterns = [
@@ -15,4 +15,6 @@ urlpatterns = [
     path('download_all_images/<str:image_collection_name>/', views.download_all_images, name='download_all_images'),
     path('generate_dataset/', views.generate_dataset_view, name='generate_dataset'),
     path('view_dataset/', views.view_dataset_view, name='view_dataset'),
+    path('download_chatbot_response/', download_chatbot_response, name='download_chatbot_response'),
+    path('chatbot/', views.chatbot_view, name='chatbot'),
 ]

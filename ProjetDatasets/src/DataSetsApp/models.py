@@ -35,7 +35,6 @@ class Image(models.Model):
 
 
 
-
 class ImageFolderMetadata(models.Model):
     folder_name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
@@ -49,3 +48,15 @@ class ImageFolderMetadata(models.Model):
         db_table = 'datasetimagefolder(metadata)'
         app_label = 'DataSetsApp'
         managed = True
+
+
+
+
+
+class ChatResponse(models.Model):
+    role = models.CharField(max_length=50)
+    content = models.TextField()
+
+    def __str__(self):
+        return f'{self.role}: {self.content[:50]}'
+from django.db import models

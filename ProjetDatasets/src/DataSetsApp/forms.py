@@ -39,17 +39,27 @@ class ImageUploadForm(forms.Form):
     )
 
 
-# Formulaire pour création de datasets avec Hugging Face avec données réelles
-class DatasetCreationForm(forms.ModelForm):
-    fichier_type = forms.ChoiceField(choices=[('csv', 'CSV'), ('json', 'JSON')])
-    prompt = forms.CharField(widget=forms.Textarea, label='Prompt', help_text='Entrez le prompt pour générer le dataset.')
-    mots_clefs = forms.CharField(
+# Formulaire pour la création de datasets avec Hugging Face
+class DatasetCreationForm(forms.Form):
+    prompt = forms.CharField(
         widget=forms.Textarea, 
-        required=False, 
-        label='Mots Clefs', 
-        help_text='Ajoutez des mots-clés pour décrire le dataset généré.'
+        label='Prompt', 
+        help_text='Entrez le prompt pour générer le dataset.'
     )
-    
-    class Meta:
-        model = Dataset
-        fields = ['titre', 'description', 'fichier_type', 'prompt', 'mots_clefs']
+    num_rows = forms.IntegerField(
+        label='Nombre de lignes', 
+        initial=5, 
+        min_value=1, 
+        required=True
+    )
+    num_columns = forms.IntegerField(
+        label='Nombre de colonnes', 
+        initial=2, 
+        min_value=1, 
+        required=True
+    )
+    fichier_type = forms.ChoiceField(
+        choices=[('csv', 'CSV'), ('json', 'JSON')], 
+        label='Format de sortie', 
+        required=True
+    )

@@ -5,7 +5,34 @@
     <h2>Générer un Dataset avec un Bot</h2>
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
+        <!-- Titre du dataset -->
+        <div class="form-group">
+            <label for="prompt">Prompt :</label>
+            <textarea id="prompt" name="prompt" class="form-control" rows="3" required></textarea>
+        </div>
+
+        <!-- Nombre de lignes -->
+        <div class="form-group mt-3">
+            <label for="num_rows">Nombre de lignes :</label>
+            <input type="number" id="num_rows" name="num_rows" class="form-control" value="5" min="1" required>
+        </div>
+
+        <!-- Nombre de colonnes -->
+        <div class="form-group mt-3">
+            <label for="num_columns">Nombre de colonnes :</label>
+            <input type="number" id="num_columns" name="num_columns" class="form-control" value="2" min="1" required>
+        </div>
+
+        <!-- Format de sortie (JSON ou CSV) -->
+        <div class="form-group mt-3">
+            <label for="fichier_type">Format de sortie :</label>
+            <select id="fichier_type" name="fichier_type" class="form-control">
+                <option value="json">JSON</option>
+                <option value="csv">CSV</option>
+            </select>
+        </div>
+
+        <!-- Bouton pour générer le dataset -->
         <button type="submit" class="btn btn-primary mt-3">Générer Dataset</button>
     </form>
 

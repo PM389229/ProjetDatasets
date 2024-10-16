@@ -9,11 +9,12 @@ from django.contrib.auth import login, authenticate
 from django.views.decorators.csrf import csrf_exempt
 from .models import Dataset , ImageFolderMetadata
 from .forms import DatasetForm, ImageUploadForm , DatasetCreationForm
-from .HuggingBot import generate_dataset_with_bot
-from django.http import HttpResponse
+from .HuggingBot import generate_dataset_with_bot ,json_to_csv
+from django.http import HttpResponse , FileResponse
 from django.conf import settings
 import io
 import tempfile
+from dotenv import load_dotenv
 import zipfile
 from zipfile import ZipFile
 import json
@@ -26,11 +27,21 @@ import logging
 from PIL import Image
 import io
 import base64
+from hugchat.login import Login
+from datetime import datetime
+from hugchat import hugchat
+from io import StringIO
+
 
 logger = logging.getLogger(__name__)
 #Constante pour dossiers d'images
 
 MONGO_URI = 'mongodb://PM929:root@localhost:27017'
+
+
+# Charger les variables d'environnement
+env_path = r"C:\Users\User\Downloads\CoursAlternance\data\ProjetDatasets\src\DataSetsApp\hf.env"
+load_dotenv(dotenv_path=env_path)
 
 
 # Configuration des identifiants pour la connection à MongoDB
@@ -40,7 +51,7 @@ MONGO_PASSWORD = 'root'
 # Vue pour la page d'accueil
 def home(request):
 
-    return render(request, 'DataSetsApp/home.html')
+    return redirect('/datasets/')
 
 
 
@@ -303,7 +314,7 @@ def delete_image_folder(request, folder_name):
 
 
 
-@login_required
+
 def list_datasets(request):
     query = request.GET.get('q', '').lower()
     file_type = request.GET.get('file_type', '').lower()
@@ -429,51 +440,48 @@ def delete_dataset(request, dataset_id):
 
 
 
-
 @login_required
 def generate_dataset_view(request):
     if request.method == 'POST':
         form = DatasetCreationForm(request.POST)
         if form.is_valid():
-            dataset = form.save(commit=False)
-            dataset.Auteur = request.user
-
+            # Extraire les informations du formulaire validé
             prompt = form.cleaned_data['prompt']
-            fichier_type = form.cleaned_data['fichier_type']
+            num_rows = form.cleaned_data['num_rows']
+            num_columns = form.cleaned_data['num_columns']
+            output_format = form.cleaned_data['fichier_type']  # JSON ou CSV
 
-            # Générer les données avec le bot
-            bot_response = generate_dataset_with_bot(prompt)
+            # Appel de la fonction pour générer le dataset avec les paramètres et le prompt personnalisé
+            dataset = generate_dataset_with_bot(prompt, num_rows=num_rows, num_columns=num_columns, output_format='json')
 
-            if bot_response:  # Vérifier si le JSON a été chargé correctement
-                # Connexion à MongoDB
-                client = MongoClient(f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@localhost:27017/')
-                db = client['my_database']
-                collection_name = dataset.titre.replace(" ", "_").lower()
-                collection = db[collection_name]
+            if dataset:
+                # Si l'utilisateur veut un fichier CSV, le convertir
+                if output_format == 'csv':
+                    csv_filename = 'dataset_huggingface.csv'
+                    json_to_csv(dataset, output_file=csv_filename)
 
-                try:
-                    if fichier_type == 'json':
-                        # Insertion dans la base de données
-                        collection.insert_many(bot_response if isinstance(bot_response, list) else [bot_response])
-                    elif fichier_type == 'csv':
-                        # Traiter la réponse CSV
-                        reader = csv.DictReader(bot_response.splitlines())
-                        for row in reader:
-                            collection.insert_one(row)
-                except Exception as e:
-                    return render(request, 'datasets/generate_dataset.html', {'form': form, 'error': str(e)})
+                    # Retourner le fichier CSV en téléchargement
+                    response = FileResponse(open(csv_filename, 'rb'))
+                    response['Content-Disposition'] = f'attachment; filename="{csv_filename}"'
+                    return response
 
-                # Sauvegarder le dataset et fermer la connexion MongoDB
-                dataset.save()
-                client.close()
-                return redirect('view_dataset')
+                # Sinon, retourner les données JSON
+                return render(request, 'datasets/view_dataset.html', {'dataset': dataset})
+
             else:
-                return render(request, 'datasets/generate_dataset.html', {'form': form, 'error': "Erreur dans la réponse du bot."})
+                return render(request, 'datasets/generate_dataset.html', {'form': form, 'error': 'Erreur lors de la génération du dataset.'})
     else:
         form = DatasetCreationForm()
 
     return render(request, 'datasets/generate_dataset.html', {'form': form})
 
+
+@login_required
+def download_csv(request):
+    file_path = 'output.csv'
+    response = FileResponse(open(file_path, 'rb'))
+    response['Content-Disposition'] = f'attachment; filename="{file_path}"'
+    return response
 
 
 
@@ -540,6 +548,162 @@ def download_all_images(request, image_collection_name):
     response['Content-Disposition'] = f'attachment; filename="{image_collection_name}.zip"'
     client.close()
     return response
+
+
+
+
+
+
+
+
+
+
+
+
+def simplifier_prompt(prompt_utilisateur):
+    import re
+    pattern = r"je veux un csv de (\d+) lignes? par (\d+) colonnes? sur (.+)"
+    match = re.search(pattern, prompt_utilisateur.lower())
+    if match:
+        lignes = match.group(1)
+        colonnes = match.group(2)
+        sujet = match.group(3)
+        
+        # Crée un prompt simplifié pour le bot
+        prompt_bot = f"Donne-moi les données (uniquement les données, pas de texte explicatif) sur {sujet}. Les données doivent être séparées par des virgules."
+        
+        # Retourne aussi le nombre de lignes et de colonnes extraites
+        return prompt_bot, int(lignes), int(colonnes)
+    else:
+        raise ValueError("Le prompt de l'utilisateur ne correspond pas au format attendu.")
+
+
+
+
+def create_csv(data, lines, cols):
+    """Créer un CSV à partir des données du bot"""
+    csv_data = []
+    headers_detected = False
+
+    # Diviser les lignes de données reçues
+    lines_data = data.split('\n')
+
+    for line in lines_data:
+        if ':' in line:
+            country, values = line.split(':')
+            values_list = [value.strip() for value in values.split(',')]
+
+            if not headers_detected:
+                # Générer les en-têtes
+                years = ['Pays'] + [f"Année {i+1}" for i in range(cols)]
+                csv_data.append(years)
+                headers_detected = True
+
+            # Limiter aux colonnes demandées et ajouter chaque pays et ses valeurs
+            csv_data.append([country.strip()] + values_list[:cols])
+
+    # Créer le CSV en mémoire
+    csv_output = StringIO()
+    csv_writer = csv.writer(csv_output)
+    csv_writer.writerows(csv_data)
+    csv_output.seek(0)
+
+    return csv_output.getvalue()
+
+
+
+
+
+def chatbot_view(request):
+    response_text = None
+    csv_data = ""  # Contiendra le CSV généré
+    lines = 5  # Valeur par défaut
+    cols = 5  # Valeur par défaut
+
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        user_prompt = request.POST.get('prompt')
+
+        try:
+            # Utilise la fonction simplifier_prompt pour générer le prompt pour le bot
+            bot_prompt, lines, cols = simplifier_prompt(user_prompt)
+
+            # Connexion et interaction avec le chatbot Hugging Face
+            sign = Login(email, password)
+            cookies = sign.login()
+            chatbot = hugchat.ChatBot(cookies=cookies.get_dict())
+
+            # Envoyer le prompt simplifié au bot et récupérer la réponse
+            response = chatbot.chat(bot_prompt)
+            response_text = str(response)
+
+            # Créer un CSV avec les données reçues
+            csv_data = create_csv(response_text, lines, cols)
+
+            # Sauvegarder la réponse et le CSV dans la session
+            request.session['chatbot_response'] = response_text
+            request.session['chatbot_csv'] = csv_data
+
+        except Exception as e:
+            print(f"Erreur: {e}")
+            response_text = str(e)
+
+    return render(request, 'chatbot.html', {'response': response_text, 'csv_data': csv_data})
+
+
+
+
+
+
+
+def download_chatbot_response(request):
+    """Télécharger la réponse du chatbot sous forme de fichier CSV."""
+    csv_data = request.session.get('chatbot_csv', [])
+
+    # Créer la réponse HTTP avec les données CSV
+    csv_output = StringIO()
+    csv_writer = csv.writer(csv_output)
+    csv_writer.writerows(csv_data)
+    csv_output.seek(0)
+
+    response = HttpResponse(csv_output.getvalue(), content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="chatbot_response.csv"'
+
+    return response
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

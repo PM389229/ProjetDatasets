@@ -15,8 +15,6 @@
         <!-- Barre de navigation de la page -->
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
             <div class="container">
-                <!-- Lien vers la page d'accueil -->
-                <a class="navbar-brand" href="{% url 'home' %}">Accueil</a>
     
                 <!-- Bouton pour afficher/cacher le menu de navigation sur les petits écrans -->
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,7 +38,7 @@
                             </li>
                             <!-- Nouveau lien pour créer un dataset -->
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'generate_dataset' %}">Créer un jeu de données</a>
+                                <a class="nav-link" href="{% url 'chatbot' %}">Créer un jeu de données</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="{% url 'logout' %}">Se déconnecter</a>

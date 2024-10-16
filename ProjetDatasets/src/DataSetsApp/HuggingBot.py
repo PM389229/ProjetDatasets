@@ -1,58 +1,82 @@
-import re
-import json
-from hugchat import hugchat
-from hugchat.login import Login
-from dotenv import load_dotenv
+import requests
 import os
-import time
+import re
+import csv
+from dotenv import load_dotenv
 
-def extract_json_from_text(text):
-    # Utiliser une expression régulière pour extraire le contenu entre les délimiteurs ````json``
-    match = re.search(r'```json(.*?)```', text, re.DOTALL)
-    if match:
-        json_text = match.group(1).strip()
-        return json_text
-    return None
-
-
-def generate_dataset_with_bot(prompt):
-    # Charger les variables d'environnement
+def generate_dataset_with_bot(prompt, num_rows=5, num_columns=2, output_format='json'):
+    # Charger les variables d'environnement pour le token Hugging Face
     env_path = r"C:\Users\User\Downloads\CoursAlternance\data\ProjetDatasets\src\DataSetsApp\hf.env"
     load_dotenv(dotenv_path=env_path)
+    hf_token = os.getenv('HF_API_TOKEN')
 
-    hf_email = os.getenv('EMAIL')
-    hf_pass = os.getenv('PASS')
+    if not hf_token:
+        print("Erreur : Le token d'API Hugging Face n'est pas défini.")
+        return None
 
-    # Connexion à Hugging Face
-    sign = Login(hf_email, hf_pass)
-    cookies = sign.login()
+    # Utiliser un modèle plus adapté à la génération structurée
+    model_id = "text-davinci-003"  # Exemple de modèle plus puissant
+    headers = {
+        "Authorization": f"Bearer {hf_token}"
+    }
 
-    # Convertir RequestsCookieJar en dictionnaire
-    cookies_dict = cookies.get_dict()
+    # Prompt détaillé, y compris le prompt personnalisé et les lignes/colonnes
+    structured_prompt = (
+        f"{prompt}\n\n"  # Prompt personnalisé
+        f"Génère un dataset JSON de {num_rows} lignes et {num_columns} colonnes. "
+        "Les champs doivent inclure des informations sur la consommation de vin des pays, avec les colonnes 'Pays', 'Année', 'Consommation (litres)', etc."
+    )
 
-    # Ajouter un délai pour la sécurité
-    time.sleep(2)
+    data = {
+        "inputs": structured_prompt
+    }
 
-    # Créer le ChatBot avec les cookies convertis en dictionnaire
-    chatbot = hugchat.ChatBot(cookies=cookies_dict)
+    # Faire une requête POST vers l'API Hugging Face
+    response = requests.post(
+        f"https://api-inference.huggingface.co/models/{model_id}",
+        headers=headers,
+        json=data
+    )
 
-    # Générer le dataset avec le prompt
-    response = chatbot.chat(prompt)
+    # Vérifier la réponse de l'API
+    if response.status_code == 200:
+        print("Réponse API reçue :")
+        generated_data = response.json()
 
-    # Convertir la réponse en chaîne de caractères directement (supposant que la réponse est du texte)
-    response_text = str(response)
+        # Extraire le texte généré
+        dataset_text = generated_data[0]['generated_text']
+        print(f"Dataset généré : {dataset_text}")
 
-    # Extraire le JSON du texte
-    json_text = extract_json_from_text(response_text)
+        # Utiliser une regex pour extraire la partie JSON
+        json_match = re.search(r'\[.*?\]', dataset_text, re.DOTALL)
 
-    if json_text:
-        # Charger le texte JSON dans une structure Python
-        try:
-            json_data = json.loads(json_text)
-            return json_data
-        except json.JSONDecodeError as e:
-            print(f"Erreur lors du chargement du JSON: {e}")
+        if json_match:
+            json_text = json_match.group(0)
+            print(f"JSON extrait : {json_text}")
+
+            try:
+                dataset_json = eval(json_text)  # Ou json.loads(json_text)
+                return dataset_json
+            except Exception as e:
+                print(f"Erreur lors de la conversion en JSON : {e}")
+                return None
+        else:
+            print("Aucun JSON valide trouvé.")
             return None
     else:
-        print("Aucun JSON trouvé dans la réponse.")
+        print(f"Erreur lors de la requête API : {response.status_code} - {response.text}")
         return None
+
+
+
+def json_to_csv(json_data, output_file='dataset_huggingface.csv'):
+    if isinstance(json_data, list) and len(json_data) > 0:
+        # Supposons que les colonnes soient toujours "Nom" et "Âge"
+        with open(output_file, 'w', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Nom', 'Âge'])
+            for row in json_data:
+                writer.writerow([row.get('Nom', ''), row.get('Âge', '')])
+        print(f"Dataset exporté en CSV : {output_file}")
+    else:
+        print("Données JSON invalides ou vides.")
