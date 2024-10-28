@@ -315,6 +315,7 @@ def delete_image_folder(request, folder_name):
 
 
 
+
 def list_datasets(request):
     query = request.GET.get('q', '').lower()
     file_type = request.GET.get('file_type', '').lower()
@@ -323,7 +324,7 @@ def list_datasets(request):
     try:
         # Connexion à la base de données MongoDB pour les métadonnées et les images
         db_metadata = client['my_database']
-        db_images = client['my_database_images']  # Définition de db_images ici
+        db_images = client['my_database_images']
         metadata_collection = db_metadata['dataset(metadata)']
         image_folder_metadata_collection = db_metadata['datasetimagefolder(metadata)']
 
@@ -359,8 +360,7 @@ def list_datasets(request):
             metadata['id'] = str(metadata['_id'])
 
             # Récupérer un échantillon d'images (miniatures) depuis la collection d'images
-            image_collection = db_images[metadata['folder_name']]  # db_images est maintenant défini
-            # On ne récupère que les miniatures ici (thumbnail_data)
+            image_collection = db_images[metadata['folder_name']]
             sample_images = list(image_collection.find({}, {'thumbnail_data': 1, 'image_name': 1}).limit(3))
 
             # Encodage base64 des miniatures pour l'affichage
@@ -375,18 +375,37 @@ def list_datasets(request):
         if query or file_type:
             for item in all_results:
                 metadata = item['metadata']
-                matches_query = query in metadata.get('description', '').lower() or \
-                                query in metadata.get('titre', '').lower() or \
-                                query in metadata.get('folder_name', '').lower() or \
-                                query in metadata.get('mots_clefs', '').lower()
-                matches_file_type = file_type == metadata.get('fichier_type', '').lower() if file_type else True
+                
+                # Vérification de correspondance avec la requête de recherche
+                matches_query = (
+                    query in metadata.get('description', '').lower() or
+                    query in metadata.get('titre', '').lower() or
+                    query in metadata.get('folder_name', '').lower() or
+                    query in metadata.get('mots_clefs', '').lower()
+                )
+
+                # Logique pour filtrer selon "texte", "image" ou type de fichier spécifique
+                if file_type == 'texte' and item['type'] == 'text':
+                    matches_file_type = True
+                elif file_type == 'image' and item['type'] == 'image':
+                    matches_file_type = True
+                elif file_type in ['csv', 'json'] and item['type'] == 'text':
+                    matches_file_type = metadata.get('fichier_type') == file_type
+                elif file_type in ['jpg', 'jpeg', 'png', 'gif', 'tiff', 'webp'] and item['type'] == 'image':
+                    matches_file_type = metadata.get('fichier_type') == file_type
+                else:
+                    matches_file_type = file_type == ""  # Aucun filtre spécifique
+
+                # Ajouter aux résultats filtrés si les deux conditions sont remplies
                 if matches_query and matches_file_type:
                     filtered_results.append(item)
         else:
             filtered_results = all_results
 
+        # Vérifier si l'utilisateur est professeur
         is_professor = request.user.groups.filter(name='Professeurs').exists()
 
+        # Rendu de la page avec les résultats filtrés
         return render(request, 'datasets/list_datasets.html', {
             'all_results': filtered_results,
             'query': query,
@@ -395,7 +414,6 @@ def list_datasets(request):
         })
     finally:
         client.close()
-
 
 
 
@@ -599,16 +617,20 @@ def create_csv(data, lines, cols):
                 csv_data.append(years)
                 headers_detected = True
 
-            # Limiter aux colonnes demandées et ajouter chaque pays et ses valeurs
+            # Ajouter chaque pays et ses valeurs
             csv_data.append([country.strip()] + values_list[:cols])
 
-    # Créer le CSV en mémoire
+    # Créer le CSV en mémoire avec encodage UTF-8
     csv_output = StringIO()
-    csv_writer = csv.writer(csv_output)
+    csv_writer = csv.writer(csv_output, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+    # Écrire les lignes dans le fichier CSV
     csv_writer.writerows(csv_data)
     csv_output.seek(0)
 
     return csv_output.getvalue()
+
+
 
 
 
@@ -655,26 +677,16 @@ def chatbot_view(request):
 
 
 
-
-
 def download_chatbot_response(request):
     """Télécharger la réponse du chatbot sous forme de fichier CSV."""
-    csv_data = request.session.get('chatbot_csv', [])
+    csv_data = request.session.get('chatbot_csv', "")
 
     # Créer la réponse HTTP avec les données CSV
-    csv_output = StringIO()
-    csv_writer = csv.writer(csv_output)
-    csv_writer.writerows(csv_data)
-    csv_output.seek(0)
-
-    response = HttpResponse(csv_output.getvalue(), content_type='text/csv')
+    response = HttpResponse(csv_data, content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="chatbot_response.csv"'
+    response.charset = 'utf-8'  # S'assurer que le CSV est encodé en UTF-8
 
     return response
-
-
-
-
 
 
 

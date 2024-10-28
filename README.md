@@ -13,3 +13,5 @@
 
 
 # Token API HUGGINGFACE  : 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 
+
+# Je veux un CSV de 5 lignes par 5 colonnes sur la consommation de vin des 5 plus grands pays producteurs de vin sur cinq ans, de 2014 à 2018
