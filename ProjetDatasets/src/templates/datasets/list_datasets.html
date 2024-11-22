@@ -5,8 +5,8 @@
     <!-- Message de bienvenue centré avec description -->
     <h1>Bienvenue sur la plateforme ISENDatasets</h1>
     <p class="lead" style="margin-top: 15px;">
-        Explorez, créez et partagez des jeux de données pour soutenir vos projets d'études et de recherche. 
-        Connectez-vous ou inscrivez-vous pour commencer à contribuer !
+        Explorez et partagez des jeux de données pour vos projets d'études et de recherche. 
+        Inscrivez-vous pour commencer à contribuer !
     </p>
 </div>
 
@@ -28,7 +28,6 @@
         </select>
         <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Rechercher</button>
     </form>
-
 
     <div class="row justify-content-center">
         <ul class="list-group col-md-8">
@@ -70,24 +69,28 @@
                                 <a href="javascript:void(0);" class="btn btn-outline-primary btn-sm mt-2" onclick="toggleSample('sample-{{ forloop.counter }}')">Aperçu</a>
                                 <div id="sample-{{ forloop.counter }}" class="mt-3 card" style="display: none;">
                                     <div class="card-body">
-                                        <table class="table table-sm mt-3">
-                                            <thead>
-                                                <tr>
-                                                    {% for header in item.sample.0.keys %}
-                                                        <th>{{ header }}</th>
-                                                    {% endfor %}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for row in item.sample %}
+                                        {% if item.sample %}
+                                            <table class="table table-sm mt-3">
+                                                <thead>
                                                     <tr>
-                                                        {% for cell in row.values %}
-                                                            <td>{{ cell }}</td>
+                                                        {% for header in item.sample.0 %}
+                                                            <th>{{ header }}</th>
                                                         {% endfor %}
                                                     </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
+                                                </thead>
+                                                <tbody>
+                                                    {% for row in item.sample %}
+                                                        <tr>
+                                                            {% for cell in row.values %}
+                                                                <td>{{ cell }}</td>
+                                                            {% endfor %}
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        {% else %}
+                                            <p>Aucun aperçu disponible.</p>
+                                        {% endif %}
                                     </div>
                                 </div>
                             {% elif item.type == 'text' %}
@@ -118,7 +121,7 @@
                                             {% elif item.metadata.fichier_type == 'tiff' %}
                                                 <img src="data:image/tiff;base64,{{ image.thumbnail_data }}" alt="{{ image.image_name }}" style="max-width: 100px; max-height: 100px; margin-right: 10px;">
                                             {% endif %}
-                                        {% endfor %}                                        
+                                            {% endfor %}
                                         </div>
                                     </div>
                                 </div>
@@ -163,7 +166,7 @@
             infoDiv.style.display = 'none';
         }
     }
-    
+
     function toggleSample(id) {
         var sampleDiv = document.getElementById(id);
         if (sampleDiv.style.display === 'none') {
@@ -172,6 +175,5 @@
             sampleDiv.style.display = 'none';
         }
     }
-    </script>
-    {% endblock %}
-    
+</script>
+{% endblock %}

@@ -29,12 +29,15 @@ import io
 import base64
 from hugchat.login import Login
 from datetime import datetime
-from hugchat import hugchat
+import hugchat
 from io import StringIO
+
 
 
 logger = logging.getLogger(__name__)
 #Constante pour dossiers d'images
+logger.info(f"Hugchat importé depuis : {hugchat.__file__}")
+
 
 MONGO_URI = 'mongodb://PM929:root@localhost:27017'
 
@@ -340,6 +343,12 @@ def list_datasets(request):
             dataset_sample = list(db_metadata[collection_name].find().limit(3))
             metadata['formatted_titre'] = collection_name
 
+            # Vérifier si le fichier est un CSV et préparer les données pour l'affichage en tableau
+            if metadata.get('fichier_type') == 'csv' and dataset_sample:
+                headers = dataset_sample[0].keys()  # Récupérer les en-têtes
+                dataset_sample = [dict(row) for row in dataset_sample]  # Transformer les objets MongoDB en dictionnaires
+                metadata['headers'] = headers  # Ajouter les en-têtes dans les métadonnées pour l'HTML
+
             try:
                 user = User.objects.get(id=metadata['Auteur_id'])
                 metadata['Auteur'] = user.username
@@ -579,21 +588,30 @@ def download_all_images(request, image_collection_name):
 
 
 def simplifier_prompt(prompt_utilisateur):
+    """
+    Transforme le prompt de l'utilisateur en une version simplifiée et compréhensible pour le bot.
+    Extrait également le nombre de lignes, de colonnes, et le sujet.
+    """
     import re
-    pattern = r"je veux un csv de (\d+) lignes? par (\d+) colonnes? sur (.+)"
+    logger = logging.getLogger(__name__)
+    logger.info("Appel de simplifier_prompt avec : %s", prompt_utilisateur)
+
+    pattern = r"je veux un dataset de (\d+) lignes? par (\d+) colonnes? sur (.+)"
     match = re.search(pattern, prompt_utilisateur.lower())
     if match:
-        lignes = match.group(1)
-        colonnes = match.group(2)
+        lignes = int(match.group(1))
+        colonnes = int(match.group(2))
         sujet = match.group(3)
-        
+        logger.info("Extraction réussie : lignes=%d, colonnes=%d, sujet=%s", lignes, colonnes, sujet)
+
         # Crée un prompt simplifié pour le bot
-        prompt_bot = f"Donne-moi les données (uniquement les données, pas de texte explicatif) sur {sujet}. Les données doivent être séparées par des virgules."
-        
-        # Retourne aussi le nombre de lignes et de colonnes extraites
-        return prompt_bot, int(lignes), int(colonnes)
+        prompt_bot = f"Je veux un dataset structuré de {lignes} lignes et {colonnes} colonnes sur {sujet}. Fournis uniquement les données sans texte explicatif."
+        logger.info("Prompt simplifié : %s", prompt_bot)
+        return prompt_bot, lignes, colonnes
     else:
+        logger.error("Le prompt de l'utilisateur ne correspond pas au format attendu.")
         raise ValueError("Le prompt de l'utilisateur ne correspond pas au format attendu.")
+
 
 
 
@@ -635,43 +653,206 @@ def create_csv(data, lines, cols):
 
 
 
+def download_json(request):
+    json_data = request.session.get('chatbot_json', "")
+    response = HttpResponse(json_data, content_type='application/json')
+    response['Content-Disposition'] = 'attachment; filename="dataset.json"'
+    return response
+
+
+
+
+
+def download_csv(request):
+    csv_data = request.session.get('chatbot_csv', "")
+    response = HttpResponse(csv_data, content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="dataset.csv"'
+    return response
+
+
+
+
+
+
+def process_bot_response(response_text):
+    """
+    Transforme la réponse brute du bot en un dataset structuré (liste de listes).
+    """
+    logger = logging.getLogger(__name__)
+    logger.info("Appel de process_bot_response avec réponse brute de taille %d", len(response_text))
+
+    dataset = []
+    lines = response_text.strip().split('\n')  # Diviser la réponse par ligne
+    logger.info("Lignes extraites : %d lignes trouvées.", len(lines))
+
+    for i, line in enumerate(lines):
+        logger.info("Traitement de la ligne %d : %s", i + 1, line)
+
+        # Ignorer les lignes inutiles (ligne de séparation ou ligne vide)
+        if line.startswith('|---') or not line.strip():
+            continue
+
+        # Nettoyer et séparer les valeurs en colonnes
+        try:
+            # Supprimer les barres verticales au début et à la fin, puis diviser
+            columns = [col.strip() for col in line.strip('|').split('|')]
+
+            # Ajouter au dataset si le nombre de colonnes est cohérent
+            if len(columns) > 1:  # Vérifie qu'il y a au moins deux colonnes
+                dataset.append(columns)
+        except Exception as e:
+            logger.error("Erreur lors du traitement de la ligne %d : %s", i + 1, str(e), exc_info=True)
+            raise
+
+    logger.info("Dataset structuré généré avec %d lignes.", len(dataset))
+    return dataset
+
+
+
+
+
+
+
+def dataset_to_csv(dataset):
+    """
+    Convertit un dataset structuré (liste de listes) en une chaîne CSV.
+    """
+    logger = logging.getLogger(__name__)
+    logger.info("Appel de dataset_to_csv avec un dataset de %d lignes.", len(dataset))
+
+    try:
+        csv_output = StringIO()
+        writer = csv.writer(csv_output, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        for row in dataset:
+            writer.writerow(row)
+        csv_output.seek(0)
+        logger.info("Conversion en CSV réussie.")
+        return csv_output.getvalue()
+    except Exception as e:
+        logger.error("Erreur lors de la conversion en CSV : %s", str(e), exc_info=True)
+        raise
+
+
+
+
+
+def dataset_to_json(dataset):
+    """
+    Convertit un dataset structuré (liste de listes) en JSON.
+    La première ligne est utilisée comme en-têtes pour les clés.
+    """
+    logger = logging.getLogger(__name__)
+    logger.info("Appel de dataset_to_json avec un dataset de %d lignes.", len(dataset))
+
+    try:
+        if not dataset:
+            logger.warning("Dataset vide reçu.")
+            return json.dumps([])
+
+        headers = dataset[0]  # Première ligne utilisée comme en-têtes
+        rows = dataset[1:]    # Les autres lignes contiennent les données
+        json_data = [dict(zip(headers, row)) for row in rows]
+        logger.info("Conversion en JSON réussie.")
+        return json.dumps(json_data, indent=4, ensure_ascii=False)
+    except Exception as e:
+        logger.error("Erreur lors de la conversion en JSON : %s", str(e), exc_info=True)
+        raise
+
+
+
+
+
+
+
+
+
+
+
 
 def chatbot_view(request):
-    response_text = None
-    csv_data = ""  # Contiendra le CSV généré
-    lines = 5  # Valeur par défaut
-    cols = 5  # Valeur par défaut
+    response_text = None  # Contiendra la réponse brute du bot
+    csv_data = ""
+    json_data = ""
+
+    logger.info("Requête reçue dans chatbot_view.")
 
     if request.method == 'POST':
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        user_prompt = request.POST.get('prompt')
+        user_prompt = request.POST.get('prompt')  # Le prompt saisi par l'utilisateur
+        logger.info("Prompt reçu de l'utilisateur : %s", user_prompt)
 
         try:
-            # Utilise la fonction simplifier_prompt pour générer le prompt pour le bot
+            # Étape 1 : Générer le prompt pour le bot
             bot_prompt, lines, cols = simplifier_prompt(user_prompt)
+            logger.info("Prompt simplifié pour le bot : %s", bot_prompt)
 
-            # Connexion et interaction avec le chatbot Hugging Face
+            # Étape 2 : Connexion et envoi du prompt au chatbot
+            email = settings.HUGGINGFACE_EMAIL
+            password = settings.HUGGINGFACE_PASSWORD
+            logger.info("Connexion au chatbot avec l'email défini dans settings.py")
+
             sign = Login(email, password)
-            cookies = sign.login()
-            chatbot = hugchat.ChatBot(cookies=cookies.get_dict())
+            cookies = sign.login()  
+            print("Type de cookies :", type(cookies))
+            print("Valeur des cookies :", cookies)
 
-            # Envoyer le prompt simplifié au bot et récupérer la réponse
+            chatbot = hugchat.ChatBot(cookies=cookies)
+            logger.info("Connexion au chatbot réussie.")
+
+            # Envoyer le prompt et obtenir la réponse
             response = chatbot.chat(bot_prompt)
             response_text = str(response)
+            logger.info("Réponse brute reçue du bot : %s", response_text[:500])  # Limite la taille du log
 
-            # Créer un CSV avec les données reçues
-            csv_data = create_csv(response_text, lines, cols)
-
-            # Sauvegarder la réponse et le CSV dans la session
-            request.session['chatbot_response'] = response_text
-            request.session['chatbot_csv'] = csv_data
+            # Stocker uniquement la réponse brute pour l'afficher
+            request.session['chatbot_response'] = response_text  # Enregistrer dans la session
 
         except Exception as e:
-            print(f"Erreur: {e}")
-            response_text = str(e)
+            logger.error("Erreur dans chatbot_view : %s", str(e), exc_info=True)
+            return render(request, 'chatbot.html', {'error': f"Erreur : {str(e)}"})
+    
+    # Afficher la réponse brute et les options de téléchargement si disponibles
+    logger.info("Affichage de la page chatbot.")
+    return render(request, 'chatbot.html', {
+        'response': response_text,  # Afficher la réponse brute
+        'csv_data': csv_data,       # Afficher si conversion en CSV
+        'json_data': json_data      # Afficher si conversion en JSON
+    })
 
-    return render(request, 'chatbot.html', {'response': response_text, 'csv_data': csv_data})
+
+
+
+
+def convert_to_csv(request):
+    response_text = request.session.get('chatbot_response', "")  # Récupérer la réponse brute
+    if not response_text:
+        return HttpResponse("Aucune donnée disponible.", status=400)
+
+    # Convertir la réponse brute en tableau structuré
+    dataset = process_bot_response(response_text)
+    csv_data = dataset_to_csv(dataset)
+
+    # Retourner un fichier CSV
+    response = HttpResponse(csv_data, content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="dataset.csv"'
+    return response
+
+
+
+
+def convert_to_json(request):
+    response_text = request.session.get('chatbot_response', "")  # Récupérer la réponse brute
+    if not response_text:
+        return HttpResponse("Aucune donnée disponible.", status=400)
+
+    # Convertir la réponse brute en tableau structuré
+    dataset = process_bot_response(response_text)
+    json_data = dataset_to_json(dataset)
+
+    # Retourner un fichier JSON
+    response = HttpResponse(json_data, content_type='application/json')
+    response['Content-Disposition'] = 'attachment; filename="dataset.json"'
+    return response
+
 
 
 

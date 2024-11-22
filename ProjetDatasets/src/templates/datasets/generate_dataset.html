@@ -2,30 +2,32 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h2>Générer un Dataset avec un Bot</h2>
+    <h2 class="text-center text-primary">Générer un Dataset avec un Bot</h2>
+    <p class="text-center text-muted">Utilisez ce formulaire pour générer un dataset structuré rapidement.</p>
+    
     <form method="post">
         {% csrf_token %}
-        <!-- Titre du dataset -->
+        <!-- Prompt -->
         <div class="form-group">
-            <label for="prompt">Prompt :</label>
-            <textarea id="prompt" name="prompt" class="form-control" rows="3" required></textarea>
+            <label for="prompt" class="font-weight-bold">Prompt :</label>
+            <textarea id="prompt" name="prompt" class="form-control" rows="3" placeholder="Exemple : Je veux un dataset de pays avec leur population et PIB." required></textarea>
         </div>
 
-        <!-- Nombre de lignes -->
-        <div class="form-group mt-3">
-            <label for="num_rows">Nombre de lignes :</label>
-            <input type="number" id="num_rows" name="num_rows" class="form-control" value="5" min="1" required>
+        <!-- Nombre de lignes et colonnes -->
+        <div class="form-row mt-3">
+            <div class="form-group col-md-6">
+                <label for="num_rows" class="font-weight-bold">Nombre de lignes :</label>
+                <input type="number" id="num_rows" name="num_rows" class="form-control" value="5" min="1" placeholder="Ex : 10" required>
+            </div>
+            <div class="form-group col-md-6">
+                <label for="num_columns" class="font-weight-bold">Nombre de colonnes :</label>
+                <input type="number" id="num_columns" name="num_columns" class="form-control" value="2" min="1" placeholder="Ex : 3" required>
+            </div>
         </div>
 
-        <!-- Nombre de colonnes -->
+        <!-- Format de sortie -->
         <div class="form-group mt-3">
-            <label for="num_columns">Nombre de colonnes :</label>
-            <input type="number" id="num_columns" name="num_columns" class="form-control" value="2" min="1" required>
-        </div>
-
-        <!-- Format de sortie (JSON ou CSV) -->
-        <div class="form-group mt-3">
-            <label for="fichier_type">Format de sortie :</label>
+            <label for="fichier_type" class="font-weight-bold">Format de sortie :</label>
             <select id="fichier_type" name="fichier_type" class="form-control">
                 <option value="json">JSON</option>
                 <option value="csv">CSV</option>
@@ -33,11 +35,31 @@
         </div>
 
         <!-- Bouton pour générer le dataset -->
-        <button type="submit" class="btn btn-primary mt-3">Générer Dataset</button>
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary mt-4">Générer Dataset</button>
+        </div>
     </form>
 
+    <!-- Gestion des erreurs -->
     {% if error %}
-        <div class="alert alert-danger mt-3">{{ error }}</div>
+        <div class="alert alert-danger mt-4 text-center">
+            <i class="fas fa-exclamation-triangle"></i> {{ error }}
+        </div>
     {% endif %}
 </div>
+
+<!-- Ajout des styles et icônes -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+<style>
+    h2 {
+        font-size: 1.8rem;
+    }
+    textarea::placeholder {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    input::placeholder {
+        color: #6c757d;
+    }
+</style>
 {% endblock %}

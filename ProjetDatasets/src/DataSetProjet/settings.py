@@ -1,6 +1,14 @@
 from pathlib import Path
 import os
 
+
+
+# IDS
+
+HUGGINGFACE_EMAIL = "pmguevel29@gmail.com"
+HUGGINGFACE_PASSWORD = "Lrk389229!"
+
+
 # Construction des chemins à l'intérieur du projet comme ceci : BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -119,7 +127,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 LANGUAGE_CODE = 'fr-FR'
 
 TIME_ZONE = 'UTC'
@@ -138,15 +145,31 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25 MB
 DATA_UPLOAD_MAX_NUMBER_FILES = 100  # qu'on peut ajuster
 
 
-
-
 # Static (CSS, JavaScript, Images)
-
-
 STATIC_URL = 'static/'
 APPEND_SLASH = True 
 
 # Type de champ de clé primaire par défaut
-
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Configuration du système de journalisation (LOGGING)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        '': {  # Logger global
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}

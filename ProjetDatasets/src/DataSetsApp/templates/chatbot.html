@@ -4,55 +4,74 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatbot</title>
+    <!-- Lien Bootstrap -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 800px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #007bff;
+        }
+        pre {
+            background-color: #f1f1f1;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .btn {
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body>
     <div class="container mt-5">
-        <h1 class="mb-4">Chatbot</h1>
+        <h1 class="mb-4 text-center">Chatbot</h1>
         <form method="POST">
             {% csrf_token %}
 
-            <!-- Champ caché pour l'email -->
-            <input type="hidden" name="email" value="pmguevel29@gmail.com">
+            <!-- Champ pour la demande -->
+            <div class="form-group">
+                <label for="prompt" class="font-weight-bold">Votre demande :</label>
+                <textarea id="prompt" name="prompt" class="form-control" rows="3" placeholder="Je veux un dataset de 10 lignes par 3 colonnes sur le climat." required></textarea>
+            </div>
 
-            <!-- Champ caché pour le mot de passe -->
-            <input type="hidden" name="password" value="Lrk389229!">
-
-
-    <!-- Champ pour le nombre de lignes -->
-    <div class="form-group">
-        <label for="prompt">Demande : </label>
-        <!-- Champ de texte avec une phrase pré-remplie -->
-        <input type="text" id="prompt" name="prompt" class="form-control" 
-               value="Je veux un CSV de [lignes] lignes par [colonnes] colonnes sur [sujet]" required>
-    </div>
-
-            <button type="submit" class="btn btn-primary">Envoyer</button>
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary mt-3">Envoyer</button>
+            </div>
         </form>
 
-        <!-- Affichage de la réponse du chatbot -->
+        <!-- Affichage de la réponse brute du bot -->
         {% if response %}
-            <div class="mt-4">
-                <h3>Réponse du chatbot :</h3>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Index</th>
-                            <th>Réponse</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>1</td> <!-- Logique dynamique pour l'index -->
-                            <td>{{ response }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <a href="{% url 'download_chatbot_response' %}" class="btn btn-primary">Télécharger la réponse</a>
+            <div class="mt-5">
+                <h4 class="font-weight-bold">Réponse brute du bot :</h4>
+                <pre>{{ response }}</pre>
             </div>
+        {% endif %}
+
+        <!-- Liens pour télécharger le dataset -->
+        {% if response %}
+            <div class="mt-5 text-center">
+                <h4 class="font-weight-bold">Télécharger le dataset :</h4>
+                <a href="{% url 'convert_to_csv' %}" class="btn btn-success">Télécharger en CSV</a>
+                <a href="{% url 'convert_to_json' %}" class="btn btn-info">Télécharger en JSON</a>
+            </div>
+        {% endif %}
+
+        <!-- Affichage des erreurs, s'il y en a -->
+        {% if error %}
+            <div class="alert alert-danger mt-5 text-center">{{ error }}</div>
         {% endif %}
     </div>
 
+    <!-- JavaScript Bootstrap -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>

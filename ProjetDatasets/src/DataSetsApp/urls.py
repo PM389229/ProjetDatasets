@@ -17,4 +17,8 @@ urlpatterns = [
     path('view_dataset/', views.view_dataset_view, name='view_dataset'),
     path('download_chatbot_response/', download_chatbot_response, name='download_chatbot_response'),
     path('chatbot/', views.chatbot_view, name='chatbot'),
+    path('download_csv/', views.download_csv, name='download_csv'),
+    path('download_json/', views.download_json, name='download_json'),
+    path('convert_to_csv/', views.convert_to_csv, name='convert_to_csv'),
+    path('convert_to_json/', views.convert_to_json, name='convert_to_json'),
 ]
