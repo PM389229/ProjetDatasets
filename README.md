@@ -1,6 +1,8 @@
 # data
 # Lancement plateforme 
-# activer env : .env\Scripts\activate
+# activer env : 
+PS C:\Users\User\Downloads\CoursAlternance\data\ProjetDatasets> .env\Scripts\Activate
+(.env) PS C:\Users\User\Downloads\CoursAlternance\data\ProjetDatasets> 
 
 # docker ps , pour l'etat des conteneurs
 # Mongo : http://localhost:8081/db/my_database/ , MDP :PM929 et "root" 
@@ -14,4 +16,11 @@
 
 # Token API HUGGINGFACE  : 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 
 
-# Je veux un CSV de 5 lignes par 5 colonnes sur la consommation de vin des 5 plus grands pays producteurs de vin sur cinq ans, de 2014 à 2018
+# Je veux un dataset de 5 lignes par 5 colonnes sur la consommation de vin en HectoLitres des 5 plus grands pays producteurs de vin sur cinq ans, de 2014 à 2018
+# Je veux un dataset de 5 lignes par 5 colonnes sur la consommation de vin dans le monde 
+
+# A savoir ;
+
+# On peut rajouter pas mal de precisions une fois le debut du prompt fait au bon format , 
+# La le prompt est léger pour tester les reponses du bot mais on peut demander pour plusieurs années , preciser
+# quel type de vin on veut (il a melangé les types dans se dernière reponse)
